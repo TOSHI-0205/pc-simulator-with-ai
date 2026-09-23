@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PC操作シミュレーター with AI</title>
+<style>
+  :root{
+    --bg:#F7F3EA; --surface:#FFFFFF; --ink:#241F18; --muted:#7A705F; --border:#E1D8C3;
+    --accent:#28527A; --accent-ink:#0F2C46; --tag-basic:#1B7F6B; --tag-adv:#8A3FB0;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#16140F; --surface:#211E17; --ink:#F2EEE2; --muted:#B3A991; --border:#3A3527;
+      --accent:#7FB0DE; --accent-ink:#DCEBF7; --tag-basic:#5FD0B9; --tag-adv:#C9A0EA;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Hiragino Sans','Noto Sans JP',sans-serif; line-height:1.75;
+    padding:40px 16px;
+  }
+  .wrap{max-width:640px; margin:0 auto;}
+  h1{font-size:clamp(1.5rem,1.1rem+1.6vw,2rem); margin:0 0 8px;}
+  p.lead{color:var(--muted); margin:0 0 32px;}
+  .card{
+    display:block; background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:24px; margin-bottom:16px; text-decoration:none; color:inherit;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .card:hover{transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.12);}
+  .tag{
+    display:inline-block; font-weight:900; font-size:.78rem; color:#fff;
+    padding:.2em .8em; border-radius:999px; margin-bottom:10px;
+  }
+  .tag.basic{background:var(--tag-basic);}
+  .tag.adv{background:var(--tag-adv);}
+  .card h2{margin:0 0 6px; font-size:1.2rem;}
+  .card p{margin:0; color:var(--muted); font-size:.92rem;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>PC操作シミュレーター with AI</h1>
+    <p class="lead">説明を読むだけでなく、実際に手を動かしながらパソコンの基本操作を練習するインタラクティブ教材です。</p>
+
+    <a class="card" href="./basic/">
+      <span class="tag basic">基本編</span>
+      <h2>全選択・コピー・貼り付け・スクリーンショット・Undo・Redo</h2>
+      <p>AIを使ううえで欠かせない6つの基本操作を練習します。</p>
+    </a>
+
+    <a class="card" href="./advanced/">
+      <span class="tag adv">応用編</span>
+      <h2>拡大縮小・フォルダ作成・保存・名前変更・複数選択・右クリック・全画面スクショ</h2>
+      <p>ファイルの整理や画面の見やすさに関わる7つの操作を練習します。</p>
+    </a>
+  </div>
+</body>
+</html>

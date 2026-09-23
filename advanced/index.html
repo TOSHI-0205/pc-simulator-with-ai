@@ -1,0 +1,1350 @@
+<title>PC操作シミュレーター with AI 応用編</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&amp;family=Noto+Sans+JP:wght@400;500;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap">
+<style>
+  :root{
+    --bg:#F7F3EA;
+    --surface:#FFFFFF;
+    --surface-2:#EFE8D8;
+    --ink:#241F18;
+    --muted:#7A705F;
+    --border:#E1D8C3;
+    --accent:#28527A;
+    --accent-ink:#0F2C46;
+    --accent-soft:#E3ECF3;
+    --success:#2E7D46;
+    --success-soft:#E4F3E8;
+    --warn:#B5540E;
+    --warn-soft:#FBEAE0;
+    --tag-basic:#1B7F6B;
+    --tag-adv:#8A3FB0;
+    --font-display:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif;
+    --font-body:'Noto Sans JP','Hiragino Kaku Gothic ProN',sans-serif;
+    --font-mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#16140F; --surface:#211E17; --surface-2:#2A261C; --ink:#F2EEE2; --muted:#B3A991;
+      --border:#3A3527; --accent:#7FB0DE; --accent-ink:#DCEBF7; --accent-soft:#213042;
+      --success:#71CB8D; --success-soft:#1D3324; --warn:#E39A63; --warn-soft:#3B2417; --tag-basic:#5FD0B9; --tag-adv:#C9A0EA;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#16140F; --surface:#211E17; --surface-2:#2A261C; --ink:#F2EEE2; --muted:#B3A991;
+    --border:#3A3527; --accent:#7FB0DE; --accent-ink:#DCEBF7; --accent-soft:#213042;
+    --success:#71CB8D; --success-soft:#1D3324; --warn:#E39A63; --warn-soft:#3B2417; --tag-basic:#5FD0B9; --tag-adv:#C9A0EA;
+  }
+
+  [hidden]{display:none !important;}
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    line-height:1.75;
+    padding-inline:16px;
+  }
+  h1,h2{font-family:var(--font-display); text-wrap:balance; margin:0;}
+  kbd{
+    font-family:var(--font-mono);
+    font-weight:700;
+    font-size:.92em;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-bottom-width:3px;
+    border-radius:6px;
+    padding:.18em .55em;
+    color:var(--ink);
+  }
+
+  .app{max-width:840px; margin:0 auto; padding-block:28px 56px; position:relative;}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:22px;}
+  .brand{display:flex; align-items:baseline; gap:10px; font-family:var(--font-display); font-weight:900; font-size:1.15rem;}
+  .ed-tag{
+    display:inline-block; font-family:var(--font-display); font-weight:900; font-size:.72em; line-height:1.35;
+    padding:.05em .6em; border-radius:999px; color:var(--surface); vertical-align:.08em; white-space:nowrap;
+  }
+  .ed-tag.basic{background:var(--tag-basic);}
+  .ed-tag.adv{background:var(--tag-adv);}
+  .brand-text small{display:block; font-family:var(--font-body); font-weight:500; font-size:.62rem; color:var(--muted); letter-spacing:.04em;}
+  .os-badge{
+    font-size:.78rem; font-weight:700; color:var(--accent-ink); background:var(--accent-soft);
+    border:1px solid var(--border); border-radius:999px; padding:.4em .9em; white-space:nowrap;
+  }
+
+  .progress{display:flex; gap:4px; margin-bottom:26px;}
+  .seg{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0;}
+  .seg-dot{
+    width:26px; height:26px; border-radius:50%; display:grid; place-items:center;
+    font-family:var(--font-mono); font-weight:700; font-size:.78rem;
+    background:var(--surface); border:2px solid var(--border); color:var(--muted);
+  }
+  .seg-label{font-size:.66rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
+  .seg::before{content:""; display:none;}
+  .seg.current .seg-dot{border-color:var(--accent); color:var(--accent-ink); background:var(--accent-soft);}
+  .seg.current .seg-label{color:var(--ink); font-weight:700;}
+  .seg.done .seg-dot{border-color:var(--success); background:var(--success); color:var(--surface);}
+  .seg.done .seg-dot::after{content:"✓";}
+  .seg.done .seg-dot{font-size:0;}
+  .seg.done .seg-dot::after{font-size:.85rem;}
+
+  .stage{position:relative;}
+  .screen{display:none;}
+  .screen.active{display:block; animation:fadeIn .35s ease both;}
+  @media (prefers-reduced-motion: reduce){ .screen.active{animation:none;} }
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:18px;
+    padding:34px clamp(20px,4vw,44px); box-shadow:0 1px 0 var(--border);
+  }
+  .start-card, .end-card{text-align:left;}
+  .eyebrow{
+    font-family:var(--font-mono); font-weight:700; font-size:.78rem; letter-spacing:.08em;
+    color:var(--accent-ink); text-transform:uppercase; margin:0 0 10px;
+  }
+  h1{font-size:clamp(1.6rem,1.2rem+1.6vw,2.2rem); margin-bottom:14px;}
+  h2{font-size:clamp(1.3rem,1.05rem+1vw,1.7rem); margin-bottom:12px;}
+  .lead{font-size:1.05rem; color:var(--ink); margin:0 0 10px;}
+  .meaning{color:var(--muted); font-size:.98rem; margin:0 0 20px; max-width:56ch;}
+  .body-text{color:var(--ink); margin:0 0 20px; max-width:58ch;}
+  .note{color:var(--muted); font-size:.85rem; margin:16px 0 22px;}
+
+  .menu-list{list-style:none; padding:0; margin:0 0 22px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 16px;}
+  .menu-list li{font-weight:700; font-size:.92rem; padding:.5em 0; border-bottom:1px dashed var(--border); color:var(--ink);}
+
+  /* 実物のキーコートを模したキーボードUI。押している間だけ .lit がついて光る */
+  .keyboard-display{display:flex; flex-wrap:wrap; gap:14px; margin-bottom:24px;}
+  .kbd-deck{
+    padding:13px 16px 12px; border-radius:14px; border:1px solid var(--border);
+    background:var(--surface-2); opacity:.5; transition:opacity .2s, border-color .2s, background .2s;
+  }
+  body.os-win .kbd-deck.win, body.os-mac .kbd-deck.mac{
+    opacity:1; border-color:var(--accent); background:var(--accent-soft);
+  }
+  .kbd-deck-label{
+    display:block; font-size:.68rem; font-weight:700; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.04em; margin-bottom:9px;
+  }
+  body.os-win .kbd-deck.win .kbd-deck-label, body.os-mac .kbd-deck.mac .kbd-deck-label{color:var(--accent-ink);}
+  .kbd-keys{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .key-cap{
+    min-width:2.5em; padding:.5em .6em; text-align:center;
+    font-family:var(--font-mono); font-weight:700; font-size:1rem; color:var(--ink);
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    box-shadow:0 3px 0 var(--border), 0 4px 7px rgba(0,0,0,.1);
+    transition:transform .06s ease, box-shadow .06s ease, background .1s ease, color .1s ease, border-color .1s ease;
+  }
+  .key-cap.lit{
+    background:var(--accent); color:#fff; border-color:var(--accent-ink);
+    transform:translateY(3px);
+    box-shadow:0 0 0 var(--accent-ink), 0 0 18px 3px var(--accent);
+  }
+  .key-plus{color:var(--muted); font-weight:700; font-size:.9rem;}
+  .key-or{font-size:.72rem; color:var(--muted); margin:0 1px;}
+
+  .os-note{display:none;}
+  body.os-win .win-note{display:block;}
+  body.os-mac .mac-note{display:block;}
+
+  .practice{
+    position:relative; border:1.5px dashed var(--border); border-radius:14px;
+    background:var(--surface-2); padding:22px 20px 20px; margin-bottom:16px;
+  }
+  .practice.completed{border-style:solid; border-color:var(--success); animation:none; box-shadow:none;}
+  .practice-tag{
+    position:absolute; top:-11px; left:16px; background:var(--accent); color:var(--surface);
+    font-size:.68rem; font-weight:700; padding:.25em .8em; border-radius:999px; letter-spacing:.03em;
+  }
+  .practice.completed .practice-tag{background:var(--success);}
+  .practice-instruction{font-weight:700; margin:4px 0 14px; font-size:.98rem;}
+  .practice-instruction.sub{color:var(--accent-ink);}
+
+  .practice-textarea, .practice-input{
+    width:100%; font-family:var(--font-body); font-size:1rem; color:var(--ink);
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:14px 16px; resize:none;
+  }
+  .practice-textarea:focus, .practice-input:focus, .chat-box:focus{
+    outline:2px solid var(--accent); outline-offset:1px;
+  }
+  .field-label{display:block; font-size:.78rem; font-weight:700; color:var(--muted); margin:14px 0 6px;}
+
+  /* 撮影対象は常に白い箱として表示する（ページのテーマに関係なく、
+     切り取る範囲が一目でわかるように）。文字そのものが「これをスクショして」
+     という指示を兼ねるので、枠は独立した白いカードだけで十分。 */
+  .shot-target{
+    background:#FFFFFF; border:3px solid var(--warn); border-radius:20px;
+    padding:36px 28px; margin-bottom:18px; text-align:center;
+    box-shadow:0 6px 20px rgba(20,15,5,.16);
+  }
+  .shot-target-title{
+    font-family:var(--font-display); font-weight:900; color:#241F18;
+    font-size:clamp(1.15rem,1.02rem+0.9vw,1.5rem); line-height:1.5; margin:0 0 12px;
+  }
+  .shot-target-note{
+    font-family:var(--font-display); font-weight:700; color:#8A7561;
+    font-size:.86rem; margin:0;
+  }
+
+  .chat-box{
+    min-height:72px; background:var(--surface); border:2px dashed var(--border); border-radius:10px;
+    padding:14px 16px; display:flex; align-items:center; justify-content:center; transition:border-color .15s, background .15s;
+  }
+  .chat-box:empty::before{content:attr(data-placeholder); color:var(--muted); font-size:.92rem; text-align:center;}
+  .chat-box img{max-width:100%; max-height:160px; border-radius:8px; display:block;}
+  .chat-box.drag-over{border-color:var(--accent); background:var(--accent-soft);}
+
+  .textarea-slot{width:100%; min-height:104px;}
+  .shared-textarea{
+    width:100%; font-family:var(--font-body); font-size:1rem; color:var(--ink);
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:14px 16px; resize:none; display:block;
+  }
+  #sharedWrap{position:absolute; display:none;}
+
+  .feedback{min-height:1.4em; font-weight:700; font-size:.92rem; margin-bottom:14px; color:var(--muted);}
+  .feedback.success{color:var(--success);}
+  .feedback.success::before{content:"✓ "; }
+  .feedback.warn{color:var(--warn);}
+  .feedback.progress{color:var(--accent-ink);}
+
+  /* ②以降の指示は最初から表示しておき、まだ順番でないうちは薄く、
+     該当フェーズになったらはっきり見せる（隠す→急に出るとユーザーが
+     気づけないため、常時表示＋強調のオンオフに変更） */
+  .practice-instruction.gated{opacity:.4; transition:opacity .25s, color .2s;}
+  .practice-instruction.gated.active{opacity:1; color:var(--accent-ink);}
+
+  .hint{margin-bottom:22px; font-size:.86rem; color:var(--muted);}
+  .hint summary{cursor:pointer; font-weight:700; color:var(--accent-ink);}
+  .hint p{margin:8px 0 0;}
+
+  .btn{
+    font-family:var(--font-display); font-weight:700; font-size:1rem; border-radius:11px;
+    padding:.85em 1.8em; border:none; cursor:pointer; transition:transform .12s, opacity .2s;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .btn-primary{background:var(--accent); color:var(--surface);}
+  .next-btn{animation:fadeIn .3s ease both;}
+
+  .recap-list{list-style:none; padding:0; margin:0 0 22px; display:flex; flex-direction:column; gap:0;}
+  .recap-list li{
+    display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--border);
+  }
+  .recap-n{
+    flex:none; width:26px; height:26px; border-radius:50%; background:var(--success-soft); color:var(--success);
+    font-family:var(--font-mono); font-weight:700; font-size:.8rem; display:grid; place-items:center;
+  }
+  .recap-name{font-weight:700; flex:1;}
+  .recap-key{font-family:var(--font-mono); font-size:.82rem; color:var(--muted); text-align:right;}
+
+  /* ショートカットが成立した瞬間に画面中央へ出す「成功！」表示 */
+  .success-overlay{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    pointer-events:none; z-index:80;
+  }
+  .success-badge{
+    font-family:var(--font-display); font-weight:900; color:var(--success);
+    background:var(--surface); border:4px solid var(--success); border-radius:28px;
+    padding:.3em .95em; font-size:clamp(2.2rem,5vw + 1.2rem,4.5rem);
+    box-shadow:0 16px 50px rgba(0,0,0,.3);
+    opacity:0; transform:scale(.55);
+  }
+  .success-overlay.show .success-badge{ animation:successPop 1s cubic-bezier(.34,1.56,.64,1) forwards; }
+  @keyframes successPop{
+    0%{opacity:0; transform:scale(.55);}
+    15%{opacity:1; transform:scale(1.08);}
+    25%{opacity:1; transform:scale(1);}
+    78%{opacity:1; transform:scale(1);}
+    100%{opacity:0; transform:scale(1.02);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .success-overlay.show .success-badge{animation:none; opacity:1;}
+  }
+
+  @media (max-width:520px){
+    .card{padding:26px 18px;}
+    .menu-list{grid-template-columns:1fr;}
+    .seg-label{display:none;}
+    .recap-key{font-size:.72rem;}
+    .practice{padding:20px 14px 16px;}
+    .shot-target{padding:26px 18px;}
+  }
+
+  /* ===== 第二弾で追加 ===== */
+  .kbd-deck.any{opacity:1; border-color:var(--accent); background:var(--accent-soft);}
+  .kbd-deck.any .kbd-deck-label{color:var(--accent-ink);}
+  .kbd-keys + .kbd-keys{margin-top:8px;}
+  body.os-mac .win-only{display:none;}
+  .key-note{font-size:.72rem; font-weight:700; color:var(--muted); min-width:3.6em;}
+  .key-cap.mouse{font-family:var(--font-body); font-size:.92rem; padding:.5em .9em;}
+  .kbd-deck-note{font-size:.76rem; color:var(--muted); margin:9px 0 0; max-width:34em;}
+
+  .zoom-level{
+    display:inline-block; font-family:var(--font-mono); font-weight:700; font-size:.82rem;
+    color:var(--accent-ink); background:var(--accent-soft); border:1px solid var(--accent);
+    border-radius:999px; padding:.2em .8em; margin:0 0 10px;
+  }
+  .zoom-guide{min-height:2.6rem; margin:0 0 6px;}
+  .zoom-guide .guide-tag{margin-left:0;}
+  .zoom-area{font-size:calc(.6rem * var(--zoom, 1)); line-height:1.6; overflow:hidden; transition:font-size .15s ease;}
+  .guide-tag.down svg{animation:bobDown .7s ease-in-out infinite alternate;}
+  @keyframes bobDown{from{transform:translateY(0);} to{transform:translateY(6px);}}
+  .tiny-text{
+    font-size:calc(.56rem * var(--zoom, 1)); transition:font-size .15s ease; line-height:1.6; color:var(--ink); background:var(--surface);
+    border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin:0;
+  }
+
+  .fm{border:1px solid var(--border); border-radius:12px; background:var(--surface); overflow:hidden;}
+  .fm-bar{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 12px;
+    background:var(--surface-2); border-bottom:1px solid var(--border); font-size:.8rem; font-weight:700; color:var(--muted);
+  }
+  .fm-btn{
+    font-family:var(--font-body); font-size:.82rem; font-weight:700; color:var(--accent-ink);
+    background:var(--accent-soft); border:1px solid var(--accent); border-radius:8px; padding:.35em .8em; cursor:pointer;
+  }
+  .fm-btn:disabled{opacity:.4; cursor:default;}
+  .fm-btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .fm-list{list-style:none; margin:0; padding:6px;}
+  .fm-row{
+    display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px; border:2px solid transparent;
+    font-size:.92rem; cursor:default; user-select:none; -webkit-user-select:none;
+  }
+  .fm-row[draggable="true"]{cursor:grab;}
+  .fm-row.selected{background:var(--accent-soft); border-color:var(--accent);}
+  .fm-row.drop-over{background:var(--success-soft); border-color:var(--success);}
+  .fm-ico{
+    flex:none; min-width:2.8em; text-align:center; font-family:var(--font-mono); font-size:.66rem; font-weight:700;
+    padding:.25em .4em; border-radius:5px; background:var(--surface-2); color:var(--muted); border:1px solid var(--border);
+  }
+  .fm-ico.folder{background:var(--accent); color:var(--surface); border-color:var(--accent-ink);}
+  .fm-name{flex:1; min-width:0; overflow-wrap:anywhere;}
+  .fm-ext{color:var(--muted);}
+  .fm-count{font-size:.76rem; color:var(--muted); white-space:nowrap;}
+  .fm-input{
+    font:inherit; padding:.2em .5em; border:2px solid var(--accent); border-radius:6px;
+    background:var(--surface); color:var(--ink); min-width:0; flex:1;
+  }
+  .fm-status{font-size:.82rem; font-weight:700; color:var(--muted); margin:10px 2px 0; min-height:1.3em;}
+  .fm-status.warn{color:var(--warn);}
+
+  /* 操作を促す誘導UI：光る行＋大きな矢印つきのタグ */
+  .fm-row.has-guide{flex-wrap:wrap; row-gap:8px;}
+  .fm-row.has-guide .fm-name, .fm-row.has-guide .fm-input{flex:1 1 9em; min-width:9em;}
+  .fm-row.has-guide .fm-count{flex:none;}
+  .fm-row.guide-glow{border-color:var(--accent); background:var(--accent-soft); animation:guideGlow 1.5s ease-in-out infinite;}
+  .ed.guide-glow{border-color:var(--accent); animation:guideGlow 1.5s ease-in-out infinite;}
+  .practice-textarea.guide-glow, .chat-box.guide-glow{border-color:var(--accent); animation:guideGlow 1.5s ease-in-out infinite;}
+  .fm-btn.guide-glow{animation:guideGlow 1.5s ease-in-out infinite;}
+  .fm-bar .guide-tag{margin-left:auto;}
+  .guide-tag.right svg{animation:bobRight .7s ease-in-out infinite alternate;}
+  @keyframes bobRight{from{transform:translateX(0);} to{transform:translateX(6px);}}
+  .zoom-guide:empty{min-height:0; margin:0;}
+  /* 指示文の中で「押すキー」「入力する名前」を別々の色で目立たせる */
+  .hl-key, .hl-name{font-weight:900; padding:.02em .4em; border-radius:.35em;}
+  .hl-key{color:var(--warn); background:var(--warn-soft);}
+  .hl-name{color:var(--tag-adv); background:rgba(138,63,176,.14);}
+  .fm-row.drop-hint{border:2px dashed var(--success); background:var(--success-soft);}
+  @keyframes guideGlow{
+    0%,100%{box-shadow:0 0 0 0 transparent;}
+    50%{box-shadow:0 0 16px 3px var(--accent);}
+  }
+  .guide-tag{
+    display:inline-flex; align-items:center; gap:6px; margin-left:auto; white-space:normal;
+    background:var(--accent); color:var(--surface); font-family:var(--font-display); font-weight:900;
+    font-size:.92rem; line-height:1.3; padding:.4em .9em .4em .7em; border-radius:999px;
+    box-shadow:0 3px 10px rgba(0,0,0,.22);
+  }
+  .guide-tag.target{background:var(--success); padding-left:.9em;}
+  .guide-tag svg{flex:none;}
+  .guide-tag.left svg{animation:bobLeft .7s ease-in-out infinite alternate;}
+  .guide-tag.up svg{animation:bobUp .7s ease-in-out infinite alternate;}
+  @keyframes bobLeft{from{transform:translateX(0);} to{transform:translateX(-6px);}}
+  @keyframes bobUp{from{transform:translateY(0);} to{transform:translateY(-6px);}}
+  @media (prefers-reduced-motion: reduce){
+    .fm-row.guide-glow, .ed.guide-glow, .practice-textarea.guide-glow, .chat-box.guide-glow, .fm-btn.guide-glow, .guide-tag svg{animation:none !important;}
+  }
+
+  .ed{border:1px solid var(--border); border-radius:12px; background:var(--surface); overflow:hidden;}
+  .ed-bar{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 12px;
+    background:var(--surface-2); border-bottom:1px solid var(--border); font-size:.85rem; font-weight:700;
+  }
+  .ed-status{
+    font-size:.76rem; font-weight:700; padding:.25em .75em; border-radius:999px;
+    background:var(--success-soft); color:var(--success); white-space:nowrap;
+  }
+  .ed-status.unsaved{background:var(--warn-soft); color:var(--warn);}
+  .ed .practice-textarea{border:none; border-radius:0;}
+
+  .ctx-menu{
+    position:fixed; z-index:70; min-width:180px; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:5px; box-shadow:0 10px 30px rgba(0,0,0,.28); display:none;
+  }
+  .ctx-menu.open{display:block;}
+  .ctx-item{
+    display:block; width:100%; text-align:left; font-family:var(--font-body); font-size:.9rem; color:var(--ink);
+    background:none; border:none; border-radius:6px; padding:.5em .8em; cursor:pointer;
+  }
+  .ctx-item:hover, .ctx-item:focus-visible{background:var(--accent-soft); color:var(--accent-ink); outline:none;}
+  .ctx-sep{height:1px; background:var(--border); margin:4px 2px;}
+</style>
+
+<div class="app">
+  <div class="success-overlay" id="successOverlay" aria-hidden="true"><div class="success-badge">成功！</div></div>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-text">PC操作シミュレーター with AI <span class="ed-tag adv">応用編</span><small>TRAINING TOOL</small></span>
+    </div>
+    <div class="os-badge" id="osBadge">環境を確認中…</div>
+  </header>
+
+  <nav class="progress" id="progress" hidden aria-label="学習の進み具合">
+    <div class="seg" data-n="1"><span class="seg-dot">1</span><span class="seg-label">拡大縮小</span></div>
+    <div class="seg" data-n="2"><span class="seg-dot">2</span><span class="seg-label">フォルダ</span></div>
+    <div class="seg" data-n="3"><span class="seg-dot">3</span><span class="seg-label">保存</span></div>
+    <div class="seg" data-n="4"><span class="seg-dot">4</span><span class="seg-label">名前変更</span></div>
+    <div class="seg" data-n="5"><span class="seg-dot">5</span><span class="seg-label">複数選択</span></div>
+    <div class="seg" data-n="6"><span class="seg-dot">6</span><span class="seg-label">右クリック</span></div>
+    <div class="seg" data-n="7"><span class="seg-dot">7</span><span class="seg-label">全画面</span></div>
+  </nav>
+
+  <main class="stage">
+
+    <section class="screen active" id="screen-start">
+      <div class="card start-card">
+        <p class="eyebrow">TRAINING TOOL</p>
+        <h1>PC操作シミュレーター with AI <span class="ed-tag adv">応用編</span></h1>
+        <p class="lead">第一弾の続きです。ファイルの整理や、見やすくする操作など、7つの基本操作を練習します。</p>
+        <p class="body-text">今回もやり方は同じです。説明を読んだら、その場で実際にキーやマウスを操作してみましょう。正しくできると「成功！」と表示されて、次に進めます。</p>
+        <ul class="menu-list">
+          <li>① 拡大・縮小</li><li>② フォルダ作成</li>
+          <li>③ 保存</li><li>④ ファイル名変更</li>
+          <li>⑤ 複数選択</li><li>⑥ 右クリック</li>
+          <li>⑦ 全画面のスクショ</li>
+        </ul>
+        <p class="note">Windows・Macのどちらでも練習できます。</p>
+        <button class="btn btn-primary" id="startBtn">はじめる</button>
+      </div>
+    </section>
+
+    <!-- STEP 1: 拡大・縮小 -->
+    <section class="screen" id="screen-1">
+      <div class="card">
+        <p class="eyebrow">STEP 1 / 7</p>
+        <h2>大きくする・小さくする：拡大・縮小</h2>
+        <p class="meaning">文字が小さくて読みにくいときに、文字をその場で大きくしたり、小さくしたりする操作です。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck win"><span class="kbd-deck-label">Windows</span>
+            <div class="kbd-keys"><span class="key-note">全選択</span><span class="key-cap" data-match="ctrl">Ctrl</span><span class="key-plus">+</span><span class="key-cap" data-match="a">A</span></div>
+            <div class="kbd-keys"><span class="key-note">拡大</span><span class="key-cap" data-match="ctrl">Ctrl</span><span class="key-plus">+</span><span class="key-cap" data-match="plus">+</span></div>
+            <div class="kbd-keys"><span class="key-note">縮小</span><span class="key-cap" data-match="ctrl">Ctrl</span><span class="key-plus">+</span><span class="key-cap" data-match="minus">-</span></div>
+          </div>
+          <div class="kbd-deck mac"><span class="kbd-deck-label">Mac</span>
+            <div class="kbd-keys"><span class="key-note">全選択</span><span class="key-cap" data-match="meta">Cmd</span><span class="key-plus">+</span><span class="key-cap" data-match="a">A</span></div>
+            <div class="kbd-keys"><span class="key-note">拡大</span><span class="key-cap" data-match="meta">Cmd</span><span class="key-plus">+</span><span class="key-cap" data-match="plus">+</span></div>
+            <div class="kbd-keys"><span class="key-note">縮小</span><span class="key-cap" data-match="meta">Cmd</span><span class="key-plus">+</span><span class="key-cap" data-match="minus">-</span></div>
+          </div>
+        </div>
+        <div class="practice waiting" id="practice1">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下の文字をクリックして、点滅カーソルを出し、全選択してください（Windows: Ctrl+A／Mac: Command+A）。第一弾の復習です。</p>
+          <p class="practice-instruction sub gated" data-phase="2">② 選んだまま、文字を拡大してください。1回だけ押せばOKです（Windows: Ctrl と +／Mac: Command と +）。</p>
+          <p class="practice-instruction sub gated" data-phase="3">③ 大きくなったら、縮小して元の大きさに戻しましょう。これも1回だけ押せばOKです（Windows: Ctrl と -／Mac: Command と -）。</p>
+          <div class="zoom-guide" id="s1Guide"></div>
+          <p class="zoom-level" id="s1Level">文字の大きさ：100%</p>
+          <textarea class="practice-textarea zoom-area" id="s1Area" rows="3">これはとても小さい文字です。全選択してから拡大すると、少しずつ読みやすくなります。AIの長い回答や、細かい表の文字を読むときにも、この操作がとても役に立ちます。</textarea>
+        </div>
+        <div class="feedback" id="feedback1" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>先に文字をクリックして、点滅するカーソルを出し、全選択してから拡大してください。この練習では、画面全体ではなく、下の文字だけが大きくなるように調整しています。画面全体の大きさが変わったままになったときは、Ctrl（Command）+ 0 で元に戻せます。+ のキーは、Shift を押しながら「;」や「=」のキーを押す場合があります。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next1" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 2: フォルダ作成 -->
+    <section class="screen" id="screen-2">
+      <div class="card">
+        <p class="eyebrow">STEP 2 / 7</p>
+        <h2>フォルダをつくる：フォルダ作成</h2>
+        <p class="meaning">バラバラのファイルを、ひとつのフォルダにまとめて整理する操作です。あとで探しやすくなります。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck any"><span class="kbd-deck-label">マウス操作（Windows・Mac共通）</span>
+            <div class="kbd-keys"><span class="key-cap mouse" data-match="click">クリック</span><span class="key-plus">→</span><span class="key-cap mouse" data-match="click">ドラッグ</span></div>
+          </div>
+        </div>
+        <div class="practice waiting" id="practice2">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 「＋ 新しいフォルダ」を押して、名前を「AI寺子屋」にして Enter を押してください。</p>
+          <p class="practice-instruction sub gated" data-phase="2">② できたフォルダに、3つのファイルをドラッグして入れましょう。</p>
+          <div class="fm">
+            <div class="fm-bar"><span>デスクトップ</span><button type="button" class="fm-btn" id="s2NewFolder">＋ 新しいフォルダ</button></div>
+            <ul class="fm-list" id="s2List"></ul>
+          </div>
+          <p class="fm-status" id="s2Status"></p>
+        </div>
+        <div class="feedback" id="feedback2" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>ファイルをマウスでつかんだまま（ボタンを押したまま）、フォルダの上まで動かしてから指を離します。フォルダが緑色になったら離すタイミングです。日本語で名前を入力するときは、変換を確定するための Enter と、名前を決める Enter を1回ずつ押します。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next2" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 3: 保存 -->
+    <section class="screen" id="screen-3">
+      <div class="card">
+        <p class="eyebrow">STEP 3 / 7</p>
+        <h2>残しておく：保存</h2>
+        <p class="meaning">書いたり直したりした内容を、ファイルとして残しておく操作です。保存しないと、閉じたときに消えてしまうことがあります。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck win"><span class="kbd-deck-label">Windows</span>
+            <div class="kbd-keys"><span class="key-cap" data-match="ctrl">Ctrl</span><span class="key-plus">+</span><span class="key-cap" data-match="s">S</span></div>
+          </div>
+          <div class="kbd-deck mac"><span class="kbd-deck-label">Mac</span>
+            <div class="kbd-keys"><span class="key-cap" data-match="meta">Cmd</span><span class="key-plus">+</span><span class="key-cap" data-match="s">S</span></div>
+          </div>
+        </div>
+        <div class="practice waiting" id="practice3">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下のメモの最後に、今日の学びを1行書き足してください。</p>
+          <p class="practice-instruction sub gated" data-phase="2">② 保存しましょう（Windows: Ctrl+S／Mac: Command+S）。</p>
+          <div class="zoom-guide" id="s3Guide"></div>
+          <div class="ed" id="s3Ed">
+            <div class="ed-bar"><span>議事メモ.txt</span><span class="ed-status" id="s3Status">✓ 保存済み</span></div>
+            <textarea class="practice-textarea" id="s3Area" rows="5">今日の学び
+・拡大と縮小のやり方
+・</textarea>
+          </div>
+        </div>
+        <div class="feedback" id="feedback3" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>メモの中をクリックして文字を書き足すと、右上が「● 未保存」に変わります。そのあと Ctrl（Macは Command）を押しながら S を押すと保存されます。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next3" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 4: ファイル名変更 -->
+    <section class="screen" id="screen-4">
+      <div class="card">
+        <p class="eyebrow">STEP 4 / 7</p>
+        <h2>名前をつけかえる：ファイル名変更</h2>
+        <p class="meaning">ファイルの名前を、あとで見てもわかりやすい名前に付けかえる操作です。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck win"><span class="kbd-deck-label">Windows</span>
+            <div class="kbd-keys"><span class="key-cap" data-match="f2">F2</span></div>
+          </div>
+          <div class="kbd-deck mac"><span class="kbd-deck-label">Mac</span>
+            <div class="kbd-keys"><span class="key-cap" data-match="enter">Enter</span></div>
+          </div>
+        </div>
+        <div class="practice waiting" id="practice4">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 「スクリーンショット…」のファイルを、クリックして選んでください。</p>
+          <p class="practice-instruction sub gated" data-phase="2">② 「スクリーンショット...」のファイルを「<span class="hl-key">ENTER</span>」にしてください。</p>
+          <p class="practice-instruction sub gated" data-phase="3">③ 「<span class="hl-name">講義資料01</span>」と入力して、<span class="hl-key">Enter</span> を押してください。</p>
+          <div class="fm">
+            <div class="fm-bar"><span>デスクトップ</span></div>
+            <ul class="fm-list" id="s4List"></ul>
+          </div>
+          <p class="fm-status" id="s4Status"></p>
+        </div>
+        <div class="feedback" id="feedback4" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>「スクリーンショット…」の行が青くなっていれば選べています。その状態で、Windowsは F2、Macは Enter を押すと、名前の部分が書き換えられるようになります。（拡張子の「.png」は変えません。）</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next4" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 5: 複数選択 -->
+    <section class="screen" id="screen-5">
+      <div class="card">
+        <p class="eyebrow">STEP 5 / 7</p>
+        <h2>まとめて選ぶ：複数選択</h2>
+        <p class="meaning">ファイルを何個か、いっぺんに選ぶ操作です。まとめてコピーしたり、移動したりできます。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck win"><span class="kbd-deck-label">Windows</span>
+            <div class="kbd-keys"><span class="key-note">連続で</span><span class="key-cap" data-match="shift">Shift</span><span class="key-plus">+</span><span class="key-cap mouse" data-match="click">クリック</span></div>
+            <div class="kbd-keys"><span class="key-note">飛び飛びで</span><span class="key-cap" data-match="ctrl">Ctrl</span><span class="key-plus">+</span><span class="key-cap mouse" data-match="click">クリック</span></div>
+          </div>
+          <div class="kbd-deck mac"><span class="kbd-deck-label">Mac</span>
+            <div class="kbd-keys"><span class="key-note">連続で</span><span class="key-cap" data-match="shift">Shift</span><span class="key-plus">+</span><span class="key-cap mouse" data-match="click">クリック</span></div>
+          </div>
+        </div>
+        <div class="practice waiting" id="practice5">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 1つ目をクリックしてから、Shift を押しながら3つ目以降（3・4・5つ目のどれか）をクリックしてください（1つ目からそこまでが、まとめて選ばれます）。</p>
+          <p class="practice-instruction sub gated win-only" data-phase="2">② 今度は、Ctrl を押しながら、1つ目・3つ目・5つ目を順番にクリックしてください（1・3・5つ目だけが選ばれます）。</p>
+          <div class="fm">
+            <div class="fm-bar"><span>講義フォルダ</span></div>
+            <ul class="fm-list" id="s5List"></ul>
+          </div>
+          <p class="fm-status" id="s5Status"></p>
+        </div>
+        <div class="feedback" id="feedback5" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>Shift は「ここからここまで」と覚えると簡単です（Windowsは、Ctrl が「これとこれとこれ」です）。キーを押したままクリックして、クリックしたあとにキーを離します。選んだ数は、下に表示されます。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next5" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 6: 右クリック -->
+    <section class="screen" id="screen-6">
+      <div class="card">
+        <p class="eyebrow">STEP 6 / 7</p>
+        <h2>メニューを出す：右クリック</h2>
+        <p class="meaning">ファイルや文字の上でメニューを出して、やりたい操作を選ぶ方法です。ショートカットを知らなくても、これで大体のことができます。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck any"><span class="kbd-deck-label">マウス操作（Windows・Mac共通）</span>
+            <div class="kbd-keys"><span class="key-cap mouse" data-match="rclick">右クリック</span></div>
+            <p class="kbd-deck-note">トラックパッドは、2本指でクリック（または Control を押しながらクリック）します。</p>
+          </div>
+        </div>
+        <div class="practice waiting" id="practice6">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下の「メモ.txt」の上で、右クリックしてください。</p>
+          <p class="practice-instruction sub gated" data-phase="2">② 出てきたメニューから、「コピー」を選んでください。</p>
+          <div class="fm">
+            <div class="fm-bar"><span>デスクトップ</span></div>
+            <ul class="fm-list"><li class="fm-row" id="s6Target"><span class="fm-ico">txt</span><span class="fm-name">メモ.txt</span></li></ul>
+          </div>
+        </div>
+        <div class="feedback" id="feedback6" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>「メモ.txt」の文字の上にマウスを合わせてから、右側のボタンを押します。メニューが出たら、そのまま「コピー」をクリックします。メニューを消したいときは、何もない場所をクリックします。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next6" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 7: 全画面のスクショ -->
+    <section class="screen" id="screen-7">
+      <div class="card">
+        <p class="eyebrow">STEP 7 / 7</p>
+        <h2>画面ぜんぶを撮る：全画面スクショ</h2>
+        <p class="meaning">いま見えている画面全体を、そのまま写真にする操作です。画面ぜんぶをAIに見せて質問したいときに便利です。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck win"><span class="kbd-deck-label">Windows</span>
+            <div class="kbd-keys"><span class="key-cap" data-match="prtsc">PrtScn</span></div>
+            <p class="kbd-deck-note">ノートパソコンは Fn を押しながら PrtScn の場合があります。</p>
+          </div>
+          <div class="kbd-deck mac"><span class="kbd-deck-label">Mac</span>
+            <div class="kbd-keys"><span class="key-cap" data-match="meta">Cmd</span><span class="key-plus">+</span><span class="key-cap" data-match="shift">Shift</span><span class="key-plus">+</span><span class="key-cap" data-match="3">3</span></div>
+          </div>
+        </div>
+        <div class="practice waiting" id="practice7">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① いま見えているこの画面を、まるごと撮影してください。枠はありません。画面ぜんぶが撮影の対象です。</p>
+          <p class="practice-instruction sub os-note win-note">② 撮れたら、下の「AIチャットへの入力欄」をクリックして貼り付けてください（Ctrl+V）。自動的にコピーされています。</p>
+          <p class="practice-instruction sub os-note mac-note">② 撮れたら、画面の隅に一瞬出てくる小さな画像（サムネイル）を、消える前に下の「AIチャットへの入力欄」までドラッグしてください。</p>
+          <div class="zoom-guide" id="s7Guide"></div>
+          <label class="field-label" for="s7Chat">AIチャットへの入力欄</label>
+          <div class="chat-box" id="s7Chat" contenteditable="true" data-placeholder="ここに画像をドラッグ、または貼り付け"></div>
+        </div>
+        <div class="feedback" id="feedback7" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>Windowsは Win + Shift + S を押して、上に出てくるメニューから「全画面」を選んでも撮れます。Macの初期設定は、貼り付け用にコピーされるのではなく、デスクトップに画像として保存されるため、Cmd+Vでは貼り付けられません。画面の隅に出てくる小さな画像を、消える前に入力欄へドラッグしてください。画面の一部だけを撮った場合は、もう一度撮り直しになります。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next7" hidden>学習を終える</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-end">
+      <div class="card end-card">
+        <p class="eyebrow">CLEAR</p>
+        <h1>お疲れさまでした</h1>
+        <p class="lead">第二弾の7つの基本操作を、実際に手を動かして練習しました。</p>
+        <ul class="recap-list">
+          <li><span class="recap-n">1</span><span class="recap-name">拡大・縮小</span><span class="recap-key">Ctrl / Cmd + + / -</span></li>
+          <li><span class="recap-n">2</span><span class="recap-name">フォルダ作成</span><span class="recap-key">新しいフォルダ + ドラッグ</span></li>
+          <li><span class="recap-n">3</span><span class="recap-name">保存</span><span class="recap-key">Ctrl / Cmd + S</span></li>
+          <li><span class="recap-n">4</span><span class="recap-name">ファイル名変更</span><span class="recap-key">F2 / Enter</span></li>
+          <li><span class="recap-n">5</span><span class="recap-name">複数選択</span><span class="recap-key">Shift + クリック</span></li>
+          <li><span class="recap-n">6</span><span class="recap-name">右クリック</span><span class="recap-key">メニューから選ぶ</span></li>
+          <li><span class="recap-n">7</span><span class="recap-name">全画面のスクショ</span><span class="recap-key">PrtScn / Cmd+Shift+3</span></li>
+        </ul>
+        <p class="body-text">これで、ファイルを整理して、画面ぜんぶをAIに見せて質問するところまでできるようになりました。</p>
+        <button class="btn btn-primary" id="restartBtn">もう一度練習する</button>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="ctx-menu" id="ctxMenu" role="menu">
+    <button type="button" class="ctx-item" role="menuitem" data-act="open">開く</button>
+    <button type="button" class="ctx-item" role="menuitem" data-act="copy">コピー</button>
+    <button type="button" class="ctx-item" role="menuitem" data-act="rename">名前の変更</button>
+    <div class="ctx-sep"></div>
+    <button type="button" class="ctx-item" role="menuitem" data-act="delete">削除</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+  document.body.classList.add(isMac ? 'os-mac' : 'os-win');
+  $('osBadge').textContent = 'あなたの環境: ' + (isMac ? 'Mac' : 'Windows') + '（自動判定）';
+
+  var current = 'start';
+  var enterHooks = {};
+
+  function show(id){
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+    $('screen-' + id).classList.add('active');
+    current = id;
+    $('progress').hidden = (id === 'start' || id === 'end');
+    document.querySelectorAll('.seg').forEach(function(seg){
+      var n = Number(seg.dataset.n);
+      seg.classList.toggle('current', id === n);
+      seg.classList.toggle('done', (typeof id === 'number' && n < id) || id === 'end');
+    });
+    closeMenu();
+    if (enterHooks[id]) enterHooks[id]();
+    window.scrollTo(0, 0);
+  }
+
+  function showBigSuccess(){
+    var overlay = $('successOverlay');
+    overlay.classList.remove('show');
+    void overlay.offsetWidth;
+    overlay.classList.add('show');
+    clearTimeout(showBigSuccess._t);
+    showBigSuccess._t = setTimeout(function(){ overlay.classList.remove('show'); }, 1100);
+  }
+
+  function markSuccess(practiceEl, feedbackEl, nextBtn, message){
+    practiceEl.classList.remove('waiting');
+    practiceEl.classList.add('completed');
+    feedbackEl.textContent = message;
+    feedbackEl.classList.remove('warn', 'progress');
+    feedbackEl.classList.add('success');
+    nextBtn.hidden = false;
+    showBigSuccess();
+  }
+  function win(n, msg){ markSuccess($('practice' + n), $('feedback' + n), $('next' + n), msg); }
+  function say(n, msg, cls){
+    var f = $('feedback' + n);
+    f.textContent = msg;
+    f.classList.remove('warn', 'progress');
+    if (cls) f.classList.add(cls);
+  }
+  function activate(n, phase){
+    var el = document.querySelector('#practice' + n + ' [data-phase="' + phase + '"]');
+    if (el) el.classList.add('active');
+  }
+  function norm(s){ return (s || '').normalize('NFKC').replace(/\s+/g, '').toLowerCase(); }
+  function composing(e){ return e.isComposing || e.keyCode === 229; }
+  var ARROWS = {
+    left: '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H5M11 5l-7 7 7 7"/></svg>',
+    down: '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15M5 13l7 7 7-7"/></svg>',
+    up: '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V5M5 11l7-7 7 7"/></svg>',
+    right: '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 5l7 7-7 7"/></svg>'
+  };
+  function guideTag(text, dir, kind){
+    var s = document.createElement('span');
+    s.className = 'guide-tag' + (kind ? ' ' + kind : '') + (ARROWS[dir] ? ' ' + dir : '');
+    var label = document.createElement('span');
+    label.textContent = text;
+    if (dir === 'right'){ s.appendChild(label); s.insertAdjacentHTML('beforeend', ARROWS.right); }   // 右向きの矢印は文字のあとに置く
+    else { s.insertAdjacentHTML('afterbegin', ARROWS[dir] || ''); s.appendChild(label); }
+    return s;
+  }
+
+  $('startBtn').addEventListener('click', function(){ show(1); });
+  $('restartBtn').addEventListener('click', function(){ location.reload(); });
+  for (var i = 1; i <= 7; i++){
+    (function(n){
+      $('next' + n).addEventListener('click', function(){ show(n === 7 ? 'end' : n + 1); });
+    })(i);
+  }
+
+  // ===== 実物のキーボードを模したキーUIの発光 =====
+  function keyMatch(e){
+    var k = e.key, c = e.code || '', m;
+    if (k === '+' || k === '=') return 'plus';
+    if (k === '-' || k === '_') return 'minus';
+    if ((m = /^Key([A-Za-z])$/.exec(c))) return m[1].toLowerCase();
+    if ((m = /^Digit([0-9])$/.exec(c))) return m[1];
+    if (c.indexOf('Control') === 0) return 'ctrl';
+    if (c.indexOf('Shift') === 0) return 'shift';
+    if (c.indexOf('Meta') === 0) return 'meta';
+    if (c.indexOf('Alt') === 0) return 'alt';
+    if (c === 'Enter' || c === 'NumpadEnter') return 'enter';
+    if (c === 'F2') return 'f2';
+    if (c === 'PrintScreen') return 'prtsc';
+    if (c === 'Equal' || c === 'NumpadAdd') return 'plus';
+    if (c === 'Minus' || c === 'NumpadSubtract') return 'minus';
+    return null;
+  }
+  function litKeys(match, on){
+    var s = document.querySelector('.screen.active');
+    if (!s) return;
+    s.querySelectorAll('.kbd-deck.any, .kbd-deck.' + (isMac ? 'mac' : 'win')).forEach(function(deck){
+      deck.querySelectorAll('.key-cap[data-match="' + match + '"]').forEach(function(cap){
+        cap.classList.toggle('lit', on);
+      });
+    });
+  }
+  var litByCode = {};
+  function clearAllLit(){
+    litByCode = {};
+    document.querySelectorAll('.key-cap.lit').forEach(function(c){ c.classList.remove('lit'); });
+  }
+  window.addEventListener('keydown', function(e){
+    var m = keyMatch(e);
+    if (!m) return;
+    litByCode[e.code] = m;
+    litKeys(m, true);
+  });
+  window.addEventListener('keyup', function(e){
+    // Macでは Command を押している間、他のキーのkeyupが届かないため、Commandを離した時にまとめて消す
+    if ((e.code || '').indexOf('Meta') === 0){
+      Object.keys(litByCode).forEach(function(code){ litKeys(litByCode[code], false); });
+      litByCode = {};
+      litKeys('meta', false);
+      return;
+    }
+    var m = litByCode[e.code] || keyMatch(e);
+    if (!m) return;
+    delete litByCode[e.code];
+    litKeys(m, false);
+  });
+  window.addEventListener('blur', clearAllLit);
+  window.addEventListener('mousedown', function(e){ litKeys(e.button === 2 ? 'rclick' : 'click', true); });
+  window.addEventListener('mouseup', function(){ litKeys('click', false); litKeys('rclick', false); });
+  window.addEventListener('contextmenu', function(){
+    litKeys('rclick', true);
+    setTimeout(function(){ litKeys('rclick', false); }, 350);
+  });
+
+  // ===== STEP 1: 拡大・縮小（クリック → 全選択 → 選択した文字だけが拡大縮小して見える） =====
+  // ブラウザ本体の拡大（Cmd/Ctrl と +/-）は、ページ側から確実には止められない。
+  // そこで拡大を検知（devicePixelRatioの変化）し、ページ全体は逆倍率で打ち消して元の見た目に保ち、
+  // 練習用の文字だけを拡大率どおりに大きくする。
+  (function(){
+    var FB = [0.5, 1, 2, 3];   // ブラウザが拡大を受け付けないとき用の予備（1回押すごとに1段階）
+    var fbIdx = 1, base = 1, phase = 'select';
+    var area = $('s1Area'), badge = $('s1Level'), guide = $('s1Guide'), appEl = document.querySelector('.app');
+    var MOD = isMac ? 'Command' : 'Ctrl';
+    function dpr(){ return window.devicePixelRatio || 1; }
+    function browserZ(){ var z = dpr() / base; return Math.abs(z - 1) < 0.02 ? 1 : z; }
+    // ブラウザの拡大は1回で10%しか変わらず、文字の変化が小さいので、1回押しただけで
+    // はっきり大きく（小さく）見えるよう、文字への反映を大きめにする。
+    function amp(z){ return z >= 1 ? Math.min(3, 1 + (z - 1) * 10) : Math.max(0.4, 1 + (z - 1) * 6); }
+    function eff(){ return phase === 'select' ? 1 : amp(browserZ()) * FB[fbIdx]; }
+    function fully(){ return area.selectionStart === 0 && area.selectionEnd === area.value.length && area.value.length > 0; }
+    function refresh(){
+      var text, dir = 'down';
+      if (phase === 'done'){ guide.innerHTML = ''; area.classList.remove('guide-glow'); return; }
+      area.classList.add('guide-glow');
+      if (phase === 'in'){ text = MOD + ' と + で拡大'; }
+      else if (phase === 'out'){ text = MOD + ' と - で縮小'; }
+      else if (document.activeElement !== area){ text = 'ここをクリック（点滅カーソルが出ます）'; dir = 'down'; }
+      else { text = MOD + ' + A で全選択'; dir = 'down'; }
+      guide.innerHTML = '';
+      guide.appendChild(guideTag(text, dir));
+    }
+    function apply(){
+      var z = browserZ();
+      appEl.style.zoom = (current === 1 && z !== 1) ? String(1 / z) : '';
+      area.style.setProperty('--zoom', eff());
+      badge.textContent = '文字の大きさ：' + Math.round(eff() * 100) + '%';
+      area.style.height = 'auto';
+      area.style.height = (area.scrollHeight + 4) + 'px';
+    }
+    function check(){
+      if (current !== 1) return;
+      apply();
+      var e = eff();
+      if (phase === 'in' && e >= 1.5){
+        phase = 'out';
+        activate(1, 3);
+        say(1, '文字が大きくなりました。次は縮小して、元の大きさに戻しましょう。', 'progress');
+      } else if (phase === 'out' && e <= 1.05){
+        phase = 'done';
+        appEl.style.zoom = '';
+        win(1, '拡大と縮小ができました。文字が読みにくいときは、いつでも使えます。');
+      }
+      refresh();
+    }
+    enterHooks[1] = function(){ base = dpr(); fbIdx = 1; phase = 'select'; apply(); refresh(); };
+    area.addEventListener('focus', refresh);
+    area.addEventListener('click', refresh);
+    area.addEventListener('blur', refresh);
+    area.addEventListener('select', function(){
+      if (current !== 1 || phase !== 'select') return;
+      if (fully()){
+        phase = 'in';
+        activate(1, 2);
+        say(1, '全選択できました。選んだまま、文字を拡大してみましょう。', 'progress');
+        check();
+      }
+    });
+    window.addEventListener('resize', check);
+    // ブラウザの拡大が働かなかったとき（上限・下限など）の予備。0.4秒待って拡大率が変わっていなければ、文字だけを直接拡大縮小する。
+    window.addEventListener('keydown', function(e){
+      if (current !== 1 || phase === 'done' || !(e.ctrlKey || e.metaKey)) return;
+      var isIn = e.key === '+' || e.key === '=' || e.code === 'Equal' || e.code === 'NumpadAdd';
+      var isOut = e.key === '-' || e.key === '_' || e.code === 'Minus' || e.code === 'NumpadSubtract';
+      if (!isIn && !isOut) return;
+      if (phase === 'select'){
+        say(1, '先に文字をクリックして、全選択（' + MOD + '+A）してください。', 'warn');
+        return;
+      }
+      var before = dpr();
+      setTimeout(function(){
+        if (dpr() !== before) return;
+        fbIdx = Math.max(0, Math.min(FB.length - 1, fbIdx + (isIn ? 1 : -1)));
+        check();
+      }, 400);
+    });
+  })();
+
+  // ===== STEP 2: フォルダ作成 =====
+  (function(){
+    var list = $('s2List'), btn = $('s2NewFolder'), status = $('s2Status');
+    var files = [
+      {id: 'a', name: '講義メモ.txt', ext: 'txt'},
+      {id: 'b', name: 'スクリーンショット.png', ext: 'png'},
+      {id: 'c', name: '資料.pdf', ext: 'pdf'}
+    ];
+    var folder = null, dragId = null, done = false;
+
+    function inside(){ return files.filter(function(f){ return f.inside; }).length; }
+
+    function fileRow(f, first){
+      var li = document.createElement('li');
+      li.className = 'fm-row';
+      li.draggable = true;
+      li.innerHTML = '<span class="fm-ico"></span><span class="fm-name"></span>';
+      li.children[0].textContent = f.ext;
+      li.children[1].textContent = f.name;
+      if (folder && !folder.editing && !done){
+        li.classList.add('guide-glow');
+        if (first){
+          li.classList.add('has-guide');
+          li.appendChild(guideTag('フォルダへドラッグ', 'up'));
+        }
+      }
+      li.addEventListener('dragstart', function(e){
+        dragId = f.id;
+        if (e.dataTransfer){ e.dataTransfer.setData('text/plain', f.id); e.dataTransfer.effectAllowed = 'move'; }
+      });
+      li.addEventListener('dragend', function(){
+        dragId = null;
+        var o = list.querySelector('.drop-over'); if (o) o.classList.remove('drop-over');
+      });
+      return li;
+    }
+
+    function folderRow(){
+      var li = document.createElement('li');
+      li.className = 'fm-row fm-folder';
+      var ico = document.createElement('span');
+      ico.className = 'fm-ico folder'; ico.textContent = 'DIR';
+      li.appendChild(ico);
+      if (folder.editing){
+        var input = document.createElement('input');
+        input.className = 'fm-input'; input.type = 'text'; input.id = 's2NameInput';
+        input.value = '新しいフォルダ';
+        input.setAttribute('aria-label', 'フォルダの名前');
+        input.addEventListener('keydown', function(e){
+          if (e.key !== 'Enter' || composing(e)) return;
+          e.preventDefault();
+          if (norm(input.value) === 'ai寺子屋'){
+            folder.name = 'AI寺子屋'; folder.editing = false;
+            status.textContent = ''; status.classList.remove('warn');
+            btn.disabled = true;
+            render();
+            activate(2, 2);
+            say(2, 'フォルダができました。次は、ファイルを入れましょう。', 'progress');
+          } else {
+            status.textContent = '名前を「AI寺子屋」にしてから、Enter を押してください。';
+            status.classList.add('warn');
+          }
+        });
+        li.appendChild(input);
+        li._input = input;
+      } else {
+        var name = document.createElement('span');
+        name.className = 'fm-name'; name.textContent = folder.name;
+        var count = document.createElement('span');
+        count.className = 'fm-count'; count.textContent = inside() + ' / ' + files.length + ' 個';
+        li.appendChild(name); li.appendChild(count);
+        if (!done && inside() < files.length){
+          li.classList.add('drop-hint', 'has-guide');
+          li.appendChild(guideTag('ここに入れる', 'none', 'target'));
+        }
+        li.addEventListener('dragenter', function(e){ if (dragId){ e.preventDefault(); li.classList.add('drop-over'); } });
+        li.addEventListener('dragover', function(e){
+          if (!dragId) return;
+          e.preventDefault();
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+          li.classList.add('drop-over');
+        });
+        li.addEventListener('dragleave', function(){ li.classList.remove('drop-over'); });
+        li.addEventListener('drop', function(e){
+          e.preventDefault();
+          li.classList.remove('drop-over');
+          if (!dragId || done) return;
+          var f = files.filter(function(x){ return x.id === dragId; })[0];
+          dragId = null;
+          if (!f || f.inside) return;
+          f.inside = true;
+          render();
+          if (inside() === files.length){
+            done = true;
+            win(2, '3つのファイルが「AI寺子屋」フォルダに入りました。デスクトップがすっきりしましたね。');
+          } else {
+            say(2, 'いいですね。あと ' + (files.length - inside()) + ' つです。', 'progress');
+          }
+        });
+      }
+      return li;
+    }
+
+    function render(){
+      list.innerHTML = '';
+      var fr = null;
+      if (folder){ fr = folderRow(); list.appendChild(fr); }
+      var firstFile = true;
+      files.forEach(function(f){ if (!f.inside){ list.appendChild(fileRow(f, firstFile)); firstFile = false; } });
+      if (fr && fr._input){ fr._input.focus(); fr._input.select(); }
+    }
+
+    var btnTag = guideTag('ここを押す', 'right');
+    btn.parentNode.insertBefore(btnTag, btn);
+    btn.classList.add('guide-glow');
+    btn.addEventListener('click', function(){
+      if (folder || current !== 2) return;
+      btnTag.remove(); btn.classList.remove('guide-glow');
+      folder = {name: '', editing: true};
+      say(2, 'フォルダの名前を入力して、Enter を押してください。', 'progress');
+      render();
+    });
+    render();
+  })();
+
+  // ===== STEP 3: 保存 =====
+  (function(){
+    var area = $('s3Area'), badge = $('s3Status'), guide = $('s3Guide'), ed = $('s3Ed');
+    var edited = false, saved = false;
+    var initial = area.value;
+    var MOD = isMac ? 'Command' : 'Ctrl';
+    function refresh(){
+      guide.innerHTML = '';
+      if (saved){ ed.classList.remove('guide-glow'); return; }
+      var text;
+      if (edited) text = MOD + ' + S で保存';
+      else if (document.activeElement === area) text = 'メモの最後に、1行書き足す';
+      else text = 'ここをクリックして、1行書き足す';
+      guide.appendChild(guideTag(text, 'down'));
+      ed.classList.add('guide-glow');
+    }
+    enterHooks[3] = refresh;
+    area.addEventListener('focus', refresh);
+    area.addEventListener('click', refresh);
+    area.addEventListener('blur', refresh);
+    area.addEventListener('input', function(){
+      if (current !== 3 || saved) return;
+      if (area.value !== initial && !edited){
+        edited = true;
+        badge.textContent = '● 未保存';
+        badge.classList.add('unsaved');
+        activate(3, 2);
+        say(3, '書き足せました。次は保存です。', 'progress');
+      }
+      refresh();
+    });
+    window.addEventListener('keydown', function(e){
+      if (current !== 3 || saved) return;
+      if (!((e.ctrlKey || e.metaKey) && e.code === 'KeyS')) return;
+      e.preventDefault();
+      if (!edited){
+        say(3, 'まだ変更がありません。先にメモの最後へ、1行書き足してみましょう。', 'warn');
+        return;
+      }
+      saved = true;
+      badge.textContent = '✓ 保存済み';
+      badge.classList.remove('unsaved');
+      refresh();
+      win(3, '保存できました。右上が「保存済み」に変わりましたね。');
+    });
+  })();
+
+  // ===== STEP 4: ファイル名変更 =====
+  (function(){
+    var list = $('s4List'), status = $('s4Status');
+    var files = [
+      {id: 's', base: 'スクリーンショット 2026-09-20 10.32', ext: 'png', target: true},
+      {id: 'm', base: '議事メモ', ext: 'txt'},
+      {id: 'p', base: '資料', ext: 'pdf'}
+    ];
+    var sel = null, renaming = false, phase = 1, done = false;
+
+    function render(){
+      list.innerHTML = '';
+      files.forEach(function(f){
+        var li = document.createElement('li');
+        li.className = 'fm-row' + (sel === f.id ? ' selected' : '');
+        var ico = document.createElement('span');
+        ico.className = 'fm-ico'; ico.textContent = f.ext;
+        li.appendChild(ico);
+        if (renaming && sel === f.id){
+          var input = document.createElement('input');
+          input.className = 'fm-input'; input.type = 'text'; input.id = 's4NameInput';
+          input.value = f.base;
+          input.setAttribute('aria-label', 'ファイルの名前');
+          var ext = document.createElement('span');
+          ext.className = 'fm-ext'; ext.textContent = '.' + f.ext;
+          input.addEventListener('keydown', function(e){
+            if (composing(e)) return;
+            if (e.key === 'Enter'){
+              e.preventDefault();
+              if (norm(input.value) === '講義資料01'){
+                f.base = '講義資料01'; renaming = false; done = true; phase = 4;
+                status.textContent = '';
+                render();
+                win(4, 'ファイル名を「講義資料01」に変えられました。');
+              } else {
+                status.textContent = '「講義資料01」と入力してから、Enter を押してください。';
+                status.classList.add('warn');
+              }
+            } else if (e.key === 'Escape'){
+              e.preventDefault();
+              renaming = false; phase = 2;
+              status.textContent = '';
+              render();
+            }
+          });
+          li.appendChild(input); li.appendChild(ext);
+          li._input = input;
+        } else {
+          var name = document.createElement('span');
+          name.className = 'fm-name'; name.textContent = f.base + '.' + f.ext;
+          li.appendChild(name);
+        }
+        if (f.target && !done){
+          li.classList.add('has-guide');
+          if (renaming && sel === f.id){
+            li.appendChild(guideTag('「講義資料01」と入力して ENTER', 'left'));
+          } else {
+            li.classList.add('guide-glow');
+            li.appendChild(guideTag(sel === f.id ? (isMac ? 'ENTER を押す' : 'F2（または ENTER）を押す') : 'これをクリック', 'left'));
+          }
+        }
+        li.addEventListener('click', function(){
+          if (done || renaming) return;
+          sel = f.id;
+          render();
+          if (f.target && phase === 1){
+            phase = 2;
+            activate(4, 2);
+            say(4, '選べました。次は、名前を変えるキーを押しましょう。', 'progress');
+          }
+        });
+        list.appendChild(li);
+        if (li._input){ setTimeout(function(){ li._input.focus(); li._input.select(); }, 0); }
+      });
+    }
+
+    window.addEventListener('keydown', function(e){
+      if (current !== 4 || done || renaming || phase < 2) return;
+      if (e.target && e.target.tagName === 'INPUT') return;
+      if (e.key !== 'Enter' && e.code !== 'F2') return;
+      if (sel !== 's') return;
+      e.preventDefault();
+      renaming = true; phase = 3;
+      activate(4, 3);
+      say(4, '名前を書き換えられます。「講義資料01」と入力してください。', 'progress');
+      render();
+    });
+    render();
+  })();
+
+  // ===== STEP 5: 複数選択 =====
+  (function(){
+    var list = $('s5List'), status = $('s5Status');
+    var names = ['講義資料01.pdf', '講義資料02.pdf', '講義資料03.pdf', '講義資料04.pdf', '講義資料05.pdf'];
+    var sel = {}, anchor = null, phase = 1, done = false;
+
+    function keys(){ return Object.keys(sel).map(Number).sort(function(a, b){ return a - b; }); }
+    function render(){
+      var k = keys();
+      list.querySelectorAll('.fm-row').forEach(function(li, i){ li.classList.toggle('selected', !!sel[i]); });
+      status.classList.remove('warn');
+      status.textContent = '選択中：' + k.length + ' 個' + (k.length ? '（' + k.map(function(n){ return n + 1; }).join('・') + ' つ目）' : '');
+    }
+    names.forEach(function(nm, i){
+      var li = document.createElement('li');
+      li.className = 'fm-row';
+      li.innerHTML = '<span class="fm-ico">pdf</span><span class="fm-name"></span>';
+      li.children[1].textContent = (i + 1) + '. ' + nm;
+      li.addEventListener('click', function(e){
+        if (done || current !== 5) return;
+        if (e.shiftKey && anchor !== null){
+          sel = {};
+          var a = Math.min(anchor, i), b = Math.max(anchor, i);
+          for (var j = a; j <= b; j++) sel[j] = true;
+        } else if (e.metaKey || e.ctrlKey){
+          if (sel[i]) delete sel[i]; else sel[i] = true;
+          anchor = i;
+        } else {
+          sel = {}; sel[i] = true; anchor = i;
+        }
+        render();
+        var k = keys();
+        if (phase === 1 && e.shiftKey && k.length >= 3 && k[k.length - 1] - k[0] === k.length - 1){
+          if (isMac){
+            done = true;
+            win(5, '1〜4つ目をまとめて選べました。Shift を使えば、たくさんのファイルを一度に選べます。');
+            return;
+          }
+          phase = 2;
+          sel = {}; anchor = null;
+          render();
+          activate(5, 2);
+          say(5, 'まとめて選べました。選択をいったん解除しました。次は、飛び飛びに選んでみましょう。', 'progress');
+        } else if (phase === 2 && k.length === 3 && sel[0] && sel[2] && sel[4]){
+          done = true;
+          win(5, '1・3・5つ目だけを選べました。まとめて選べると、整理がぐっと楽になります。');
+        } else if (phase === 2 && k.length >= 3){
+          say(5, '1・3・5つ目だけが選ばれている状態にしてください。違う場所を選んだときは、もう一度クリックすると外れます。', 'warn');
+        }
+      });
+      // Macの Control+クリックは、クリックではなく右クリック扱いになるため、同じ「追加で選ぶ」動作として扱う
+      li.addEventListener('contextmenu', function(e){
+        if (!e.ctrlKey || done || current !== 5) return;
+        e.preventDefault();
+        li.dispatchEvent(new MouseEvent('click', {bubbles: true, ctrlKey: true}));
+      });
+      list.appendChild(li);
+    });
+    render();
+  })();
+
+  // ===== STEP 6: 右クリック =====
+  var menu = $('ctxMenu');
+  function closeMenu(){ menu.classList.remove('open'); }
+  (function(){
+    var target = $('s6Target');
+    var phase = 1, done = false;
+    target.classList.add('has-guide', 'guide-glow');
+    target.appendChild(guideTag('ここで右クリック', 'left'));
+    function clearGuide(){
+      target.classList.remove('has-guide', 'guide-glow');
+      var g = target.querySelector('.guide-tag'); if (g) g.remove();
+    }
+    function openMenu(x, y){
+      menu.classList.add('open');
+      var r = menu.getBoundingClientRect();
+      menu.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
+      menu.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + 'px';
+    }
+    target.addEventListener('contextmenu', function(e){
+      if (current !== 6 || done) return;
+      e.preventDefault();
+      openMenu(e.clientX, e.clientY);
+      if (phase === 1){
+        phase = 2;
+        clearGuide();
+        activate(6, 2);
+        say(6, 'メニューが出ました。「コピー」を選んでください。', 'progress');
+      }
+    });
+    menu.addEventListener('click', function(e){
+      var btn = e.target.closest('.ctx-item');
+      if (!btn || done) return;
+      var act = btn.getAttribute('data-act');
+      closeMenu();
+      if (act === 'copy'){
+        done = true;
+        win(6, '「コピー」を選べました。右クリックのメニューからも、コピーができます。');
+      } else if (act === 'delete'){
+        say(6, 'これは練習なので、何も消えません。今回は「コピー」を選んでみましょう。', 'warn');
+      } else {
+        say(6, 'それも便利な項目です。今回は「コピー」を選んでみましょう。', 'progress');
+      }
+    });
+    document.addEventListener('click', function(e){ if (!e.target.closest('#ctxMenu')) closeMenu(); });
+    window.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeMenu(); });
+    window.addEventListener('scroll', closeMenu, true);
+  })();
+
+  // ===== STEP 7: 全画面のスクショ =====
+  (function(){
+    var chat = $('s7Chat'), done = false, guide7 = $('s7Guide');
+    var MOD7 = isMac ? 'Command' : 'Ctrl';
+    function refresh7(){
+      guide7.innerHTML = '';
+      if (done){ chat.classList.remove('guide-glow'); return; }
+      var text = isMac ? '小さな画像（サムネイル）を、ここへドラッグ'
+        : (document.activeElement === chat ? MOD7 + ' + V で貼り付け' : 'ここをクリックして、貼り付け');
+      guide7.appendChild(guideTag(text, 'down'));
+      chat.classList.add('guide-glow');
+    }
+    ['focus', 'click', 'blur'].forEach(function(ev){ chat.addEventListener(ev, refresh7); });
+    refresh7();
+    function findImageFile(dt){
+      if (!dt) return null;
+      var files = dt.files || [];
+      for (var i = 0; i < files.length; i++){
+        if (files[i].type && files[i].type.indexOf('image') !== -1) return files[i];
+      }
+      var items = dt.items || [];
+      for (var j = 0; j < items.length; j++){
+        if (items[j].kind === 'file' && items[j].type && items[j].type.indexOf('image') !== -1) return items[j].getAsFile();
+      }
+      return null;
+    }
+    function accept(file){
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.alt = 'スクリーンショット';
+      img.onload = function(){
+        var need = 0.7 * screen.width * (window.devicePixelRatio || 1);
+        if (img.naturalWidth < need){
+          say(7, '画面の一部だけのようです。画面ぜんぶを、もう一度撮ってみましょう。', 'warn');
+          return;
+        }
+        chat.innerHTML = '';
+        chat.appendChild(img);
+        done = true;
+        refresh7();
+        win(7, '画面全体のスクショを、AIチャットに貼り付けられました。これで画面ぜんぶをAIに見せて質問できます。');
+      };
+      img.onerror = function(){ say(7, '画像を読み込めませんでした。もう一度お試しください。', 'warn'); };
+      img.src = url;
+    }
+    chat.addEventListener('paste', function(e){
+      if (done || current !== 7) return;
+      var f = findImageFile(e.clipboardData || window.clipboardData);
+      if (f){ e.preventDefault(); accept(f); return; }
+      say(7, '画像が見つかりませんでした。もう一度、画面ぜんぶを撮ってから貼り付けてみてください。', 'warn');
+    });
+    ['dragenter', 'dragover'].forEach(function(t){
+      chat.addEventListener(t, function(e){
+        if (done || current !== 7) return;
+        e.preventDefault(); chat.classList.add('drag-over');
+      });
+    });
+    ['dragleave', 'dragend'].forEach(function(t){
+      chat.addEventListener(t, function(){ chat.classList.remove('drag-over'); });
+    });
+    chat.addEventListener('drop', function(e){
+      e.preventDefault(); chat.classList.remove('drag-over');
+      if (done || current !== 7) return;
+      var f = findImageFile(e.dataTransfer);
+      if (f){ accept(f); return; }
+      say(7, '画像が見つかりませんでした。スクショの画像を枠にドラッグしてみてください。', 'warn');
+    });
+  })();
+})();
+</script>
