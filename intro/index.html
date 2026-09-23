@@ -1,0 +1,1151 @@
+<title>PC操作シミュレーター with AI 導入編</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&amp;family=Noto+Sans+JP:wght@400;500;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap">
+<style>
+  :root{
+    --bg:#F7F3EA;
+    --surface:#FFFFFF;
+    --surface-2:#EFE8D8;
+    --ink:#241F18;
+    --muted:#7A705F;
+    --border:#E1D8C3;
+    --accent:#28527A;
+    --accent-ink:#0F2C46;
+    --accent-soft:#E3ECF3;
+    --success:#2E7D46;
+    --success-soft:#E4F3E8;
+    --warn:#B5540E;
+    --warn-soft:#FBEAE0;
+    --tag-basic:#1B7F6B;
+    --tag-adv:#8A3FB0;
+    --tag-intro:#96780A;
+    --font-display:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif;
+    --font-body:'Noto Sans JP','Hiragino Kaku Gothic ProN',sans-serif;
+    --font-mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#16140F; --surface:#211E17; --surface-2:#2A261C; --ink:#F2EEE2; --muted:#B3A991;
+      --border:#3A3527; --accent:#7FB0DE; --accent-ink:#DCEBF7; --accent-soft:#213042;
+      --success:#71CB8D; --success-soft:#1D3324; --warn:#E39A63; --warn-soft:#3B2417; --tag-basic:#5FD0B9; --tag-adv:#C9A0EA; --tag-intro:#E6C464;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#16140F; --surface:#211E17; --surface-2:#2A261C; --ink:#F2EEE2; --muted:#B3A991;
+    --border:#3A3527; --accent:#7FB0DE; --accent-ink:#DCEBF7; --accent-soft:#213042;
+    --success:#71CB8D; --success-soft:#1D3324; --warn:#E39A63; --warn-soft:#3B2417; --tag-basic:#5FD0B9; --tag-adv:#C9A0EA; --tag-intro:#E6C464;
+  }
+
+  [hidden]{display:none !important;}
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    line-height:1.75;
+    padding-inline:16px;
+  }
+  h1,h2{font-family:var(--font-display); text-wrap:balance; margin:0;}
+  kbd{
+    font-family:var(--font-mono);
+    font-weight:700;
+    font-size:.92em;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-bottom-width:3px;
+    border-radius:6px;
+    padding:.18em .55em;
+    color:var(--ink);
+  }
+
+  .app{max-width:840px; margin:0 auto; padding-block:28px 56px; position:relative;}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:22px;}
+  .brand{display:flex; align-items:baseline; gap:10px; font-family:var(--font-display); font-weight:900; font-size:1.15rem;}
+  .ed-tag{
+    display:inline-block; font-family:var(--font-display); font-weight:900; font-size:.72em; line-height:1.35;
+    padding:.05em .6em; border-radius:999px; color:var(--surface); vertical-align:.08em; white-space:nowrap;
+  }
+  .ed-tag.basic{background:var(--tag-basic);}
+  .ed-tag.adv{background:var(--tag-adv);}
+  .ed-tag.intro{background:var(--tag-intro);}
+  .brand-text small{display:block; font-family:var(--font-body); font-weight:500; font-size:.62rem; color:var(--muted); letter-spacing:.04em;}
+  .os-badge{
+    font-size:.78rem; font-weight:700; color:var(--accent-ink); background:var(--accent-soft);
+    border:1px solid var(--border); border-radius:999px; padding:.4em .9em; white-space:nowrap;
+  }
+
+  .progress{display:flex; gap:3px; margin-bottom:26px; flex-wrap:wrap; row-gap:10px;}
+  .seg{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0;}
+  .seg-dot{
+    width:24px; height:24px; border-radius:50%; display:grid; place-items:center;
+    font-family:var(--font-mono); font-weight:700; font-size:.72rem;
+    background:var(--surface); border:2px solid var(--border); color:var(--muted);
+  }
+  .seg-label{font-size:.6rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
+  .seg.current .seg-dot{border-color:var(--accent); color:var(--accent-ink); background:var(--accent-soft);}
+  .seg.current .seg-label{color:var(--ink); font-weight:700;}
+  .seg.done .seg-dot{border-color:var(--success); background:var(--success); color:var(--surface); font-size:0;}
+  .seg.done .seg-dot::after{content:"✓"; font-size:.78rem;}
+
+  .stage{position:relative;}
+  .screen{display:none;}
+  .screen.active{display:block; animation:fadeIn .35s ease both;}
+  @media (prefers-reduced-motion: reduce){ .screen.active{animation:none;} }
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:18px;
+    padding:34px clamp(20px,4vw,44px); box-shadow:0 1px 0 var(--border);
+  }
+  .start-card, .end-card{text-align:left;}
+  .eyebrow{
+    font-family:var(--font-mono); font-weight:700; font-size:.78rem; letter-spacing:.08em;
+    color:var(--accent-ink); text-transform:uppercase; margin:0 0 10px;
+  }
+  h1{font-size:clamp(1.6rem,1.2rem+1.6vw,2.2rem); margin-bottom:14px;}
+  h2{font-size:clamp(1.3rem,1.05rem+1vw,1.7rem); margin-bottom:12px;}
+  .lead{font-size:1.05rem; color:var(--ink); margin:0 0 10px;}
+  .meaning{color:var(--muted); font-size:.98rem; margin:0 0 20px; max-width:56ch;}
+  .body-text{color:var(--ink); margin:0 0 20px; max-width:58ch;}
+  .note{color:var(--muted); font-size:.85rem; margin:16px 0 22px;}
+
+  .menu-list{list-style:none; padding:0; margin:0 0 22px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 16px;}
+  .menu-list li{font-weight:700; font-size:.9rem; padding:.5em 0; border-bottom:1px dashed var(--border); color:var(--ink);}
+
+  .keyboard-display{display:flex; flex-wrap:wrap; gap:14px; margin-bottom:24px;}
+  .kbd-deck{
+    padding:13px 16px 12px; border-radius:14px; border:1px solid var(--border);
+    background:var(--surface-2); opacity:.5; transition:opacity .2s, border-color .2s, background .2s;
+  }
+  .kbd-deck.any{opacity:1; border-color:var(--accent); background:var(--accent-soft);}
+  body.os-win .kbd-deck.win, body.os-mac .kbd-deck.mac{
+    opacity:1; border-color:var(--accent); background:var(--accent-soft);
+  }
+  .kbd-deck-label{
+    display:block; font-size:.68rem; font-weight:700; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.04em; margin-bottom:9px;
+  }
+  .kbd-deck.any .kbd-deck-label{color:var(--accent-ink);}
+  body.os-win .kbd-deck.win .kbd-deck-label, body.os-mac .kbd-deck.mac .kbd-deck-label{color:var(--accent-ink);}
+  .kbd-keys{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .key-cap{
+    min-width:2.5em; padding:.5em .6em; text-align:center;
+    font-family:var(--font-mono); font-weight:700; font-size:1rem; color:var(--ink);
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    box-shadow:0 3px 0 var(--border), 0 4px 7px rgba(0,0,0,.1);
+    transition:transform .06s ease, box-shadow .06s ease, background .1s ease, color .1s ease, border-color .1s ease;
+  }
+  .key-cap.mouse{font-family:var(--font-body); font-size:.92rem; padding:.5em .9em;}
+  .key-cap.lit{
+    background:var(--accent); color:#fff; border-color:var(--accent-ink);
+    transform:translateY(3px);
+    box-shadow:0 0 0 var(--accent-ink), 0 0 18px 3px var(--accent);
+  }
+  .key-plus{color:var(--muted); font-weight:700; font-size:.9rem;}
+  .key-or{font-size:.72rem; color:var(--muted); margin:0 1px;}
+
+  .practice{
+    position:relative; border:1.5px dashed var(--border); border-radius:14px;
+    background:var(--surface-2); padding:22px 20px 20px; margin-bottom:16px;
+  }
+  .practice.completed{border-style:solid; border-color:var(--success); animation:none; box-shadow:none;}
+  .practice-tag{
+    position:absolute; top:-11px; left:16px; background:var(--accent); color:var(--surface);
+    font-size:.68rem; font-weight:700; padding:.25em .8em; border-radius:999px; letter-spacing:.03em;
+  }
+  .practice.completed .practice-tag{background:var(--success);}
+  .practice-instruction{font-weight:700; margin:4px 0 14px; font-size:.98rem;}
+  .practice-instruction.sub{color:var(--accent-ink);}
+  .practice-instruction.gated{opacity:.4; transition:opacity .25s, color .2s;}
+  .practice-instruction.gated.active{opacity:1; color:var(--accent-ink);}
+
+  .practice-textarea, .practice-input{
+    width:100%; font-family:var(--font-body); font-size:1rem; color:var(--ink);
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:14px 16px; resize:none;
+  }
+  .practice-textarea:focus, .practice-input:focus{
+    outline:2px solid var(--accent); outline-offset:1px;
+  }
+  .field-label{display:block; font-size:.78rem; font-weight:700; color:var(--muted); margin:14px 0 6px;}
+
+  .feedback{min-height:1.4em; font-weight:700; font-size:.92rem; margin-bottom:14px; color:var(--muted);}
+  .feedback.success{color:var(--success);}
+  .feedback.success::before{content:"✓ "; }
+  .feedback.warn{color:var(--warn);}
+  .feedback.progress{color:var(--accent-ink);}
+
+  .hint{margin-bottom:22px; font-size:.86rem; color:var(--muted);}
+  .hint summary{cursor:pointer; font-weight:700; color:var(--accent-ink);}
+  .hint p{margin:8px 0 0;}
+
+  .btn{
+    font-family:var(--font-display); font-weight:700; font-size:1rem; border-radius:11px;
+    padding:.85em 1.8em; border:none; cursor:pointer; transition:transform .12s, opacity .2s;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .btn-primary{background:var(--accent); color:var(--surface);}
+  .btn-primary:disabled{opacity:.45; cursor:default; transform:none;}
+  .next-btn{animation:fadeIn .3s ease both;}
+
+  .recap-list{list-style:none; padding:0; margin:0 0 22px; display:flex; flex-direction:column; gap:0;}
+  .recap-list li{
+    display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--border);
+  }
+  .recap-n{
+    flex:none; width:26px; height:26px; border-radius:50%; background:var(--success-soft); color:var(--success);
+    font-family:var(--font-mono); font-weight:700; font-size:.8rem; display:grid; place-items:center;
+  }
+  .recap-name{font-weight:700; flex:1;}
+  .recap-key{font-family:var(--font-mono); font-size:.78rem; color:var(--muted); text-align:right;}
+
+  .success-overlay{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    pointer-events:none; z-index:80;
+  }
+  .success-badge{
+    font-family:var(--font-display); font-weight:900; color:var(--success);
+    background:var(--surface); border:4px solid var(--success); border-radius:28px;
+    padding:.3em .95em; font-size:clamp(2.2rem,5vw + 1.2rem,4.5rem);
+    box-shadow:0 16px 50px rgba(0,0,0,.3);
+    opacity:0; transform:scale(.55);
+  }
+  .success-overlay.show .success-badge{ animation:successPop 1s cubic-bezier(.34,1.56,.64,1) forwards; }
+  @keyframes successPop{
+    0%{opacity:0; transform:scale(.55);}
+    15%{opacity:1; transform:scale(1.08);}
+    25%{opacity:1; transform:scale(1);}
+    78%{opacity:1; transform:scale(1);}
+    100%{opacity:0; transform:scale(1.02);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .success-overlay.show .success-badge{animation:none; opacity:1;}
+  }
+
+  /* 見える誘導UI：光る対象＋矢印つきタグ */
+  .guide-glow{animation:guideGlow 1.5s ease-in-out infinite;}
+  @keyframes guideGlow{
+    0%,100%{box-shadow:0 0 0 0 transparent;}
+    50%{box-shadow:0 0 16px 3px var(--accent);}
+  }
+  .guide-tag{
+    display:inline-flex; align-items:center; gap:6px; white-space:normal;
+    background:var(--accent); color:var(--surface); font-family:var(--font-display); font-weight:900;
+    font-size:.9rem; line-height:1.3; padding:.4em .9em .4em .7em; border-radius:999px;
+    box-shadow:0 3px 10px rgba(0,0,0,.22); margin-bottom:10px;
+  }
+  .guide-tag svg{flex:none;}
+  .guide-tag.left svg{animation:bobLeft .7s ease-in-out infinite alternate;}
+  .guide-tag.up svg{animation:bobUp .7s ease-in-out infinite alternate;}
+  .guide-tag.down svg{animation:bobDown .7s ease-in-out infinite alternate;}
+  @keyframes bobLeft{from{transform:translateX(0);} to{transform:translateX(-6px);}}
+  @keyframes bobUp{from{transform:translateY(0);} to{transform:translateY(-6px);}}
+  @keyframes bobDown{from{transform:translateY(0);} to{transform:translateY(6px);}}
+  @media (prefers-reduced-motion: reduce){ .guide-glow, .guide-tag svg{animation:none !important;} }
+
+  /* STEP1: ポイント（的） */
+  .point-wrap{display:flex; justify-content:center; padding:20px 0 8px;}
+  .point-target{width:64px; height:64px; border-radius:50%; background:var(--accent-soft); border:3px solid var(--accent);}
+  .point-target.done{animation:none; border-color:var(--success); background:var(--success-soft);}
+
+  /* STEP3/4: ファイル行 */
+  .fm{border:1px solid var(--border); border-radius:12px; background:var(--surface); overflow:hidden;}
+  .fm-list{list-style:none; margin:0; padding:6px;}
+  .fm-row{
+    display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:8px; border:2px solid transparent;
+    font-size:.94rem; user-select:none; -webkit-user-select:none;
+  }
+  .fm-ico{
+    flex:none; min-width:2.8em; text-align:center; font-family:var(--font-mono); font-size:.66rem; font-weight:700;
+    padding:.25em .4em; border-radius:5px; background:var(--surface-2); color:var(--muted); border:1px solid var(--border);
+  }
+  .fm-name{flex:1;}
+
+  /* 開いたウィンドウ／ウィンドウ操作の練習（STEP3・10共通） */
+  .win-mock{
+    width:100%; max-width:340px; margin:16px auto 4px; border:1px solid var(--border); border-radius:12px;
+    background:var(--surface); box-shadow:0 8px 20px rgba(0,0,0,.12); overflow:hidden;
+  }
+  .win-mock-bar{background:var(--surface-2); padding:8px 12px; font-size:.78rem; font-weight:700; color:var(--muted); border-bottom:1px solid var(--border);}
+  .win-mock-body{padding:26px 16px; text-align:center; color:var(--muted); font-size:.86rem;}
+  .win-mock.anim-close{animation:winClose .5s ease forwards;}
+  .win-mock.anim-min{animation:winMin .5s ease;}
+  .win-mock.anim-max{animation:winMax .5s ease;}
+  @keyframes winClose{0%{opacity:1; transform:scale(1);} 100%{opacity:.15; transform:scale(.82);}}
+  @keyframes winMin{0%{transform:scale(1) translateY(0);} 50%{transform:scale(.45) translateY(70px);} 100%{transform:scale(1) translateY(0);}}
+  @keyframes winMax{0%{transform:scale(1);} 50%{transform:scale(1.06);} 100%{transform:scale(1);}}
+  @media (prefers-reduced-motion: reduce){ .win-mock.anim-close, .win-mock.anim-min, .win-mock.anim-max{animation:none !important;} }
+  .win-actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;}
+  .win-actions .btn{flex:1; min-width:120px; font-size:.9rem; padding:.7em 1em;}
+
+  /* STEP5: ドラッグ＆ドロップ */
+  .drag-stage{display:flex; flex-direction:column; align-items:center; gap:14px; padding:10px 0;}
+  .drag-item{
+    width:88px; height:88px; border-radius:16px; background:var(--accent-soft); border:2px solid var(--accent);
+    display:grid; place-items:center; font-weight:900; color:var(--accent-ink); cursor:grab; font-family:var(--font-display);
+  }
+  .drop-zone{
+    width:100%; max-width:280px; min-height:100px; border:2px dashed var(--border); border-radius:14px;
+    display:grid; place-items:center; color:var(--muted); font-weight:700; text-align:center;
+    transition:border-color .15s, background .15s;
+  }
+  .drop-zone.drop-over{border-color:var(--accent); background:var(--accent-soft);}
+  .drop-zone.filled{border-style:solid; border-color:var(--success); background:var(--success-soft); color:var(--success);}
+  .drag-item.guide-glow{animation:guideGlow 1.5s ease-in-out infinite, dragBlink 1s ease-in-out infinite;}
+  @keyframes dragBlink{50%{opacity:.5;}}
+  @media (prefers-reduced-motion: reduce){ .drag-item.guide-glow{animation:none;} }
+
+  /* STEP6: スクロール */
+  .scroll-box{
+    max-height:150px; overflow-y:auto; border:1px solid var(--border); border-radius:12px; padding:14px 16px; background:var(--surface);
+    scrollbar-color:#FF6A13 var(--surface-2); scrollbar-width:thin;
+  }
+  .scroll-box::-webkit-scrollbar{width:14px;}
+  .scroll-box::-webkit-scrollbar-track{background:var(--surface-2); border-radius:8px;}
+  .scroll-box::-webkit-scrollbar-thumb{background:#FF6A13; border-radius:8px; border:2px solid var(--surface); box-shadow:0 0 6px #FF6A13;}
+  .scroll-box::-webkit-scrollbar-thumb:hover{background:#FF8C3D;}
+  .scroll-box p{margin:0 0 14px; color:var(--ink); font-size:.92rem;}
+  .hl-scroll{color:#FF6A13; font-weight:900; background:rgba(255,106,19,.16); padding:.02em .4em; border-radius:.35em;}
+  .scroll-end{font-weight:900; color:#FF6A13; text-align:center; animation:scrollEndBlink 1s steps(2,start) infinite;}
+  @media (prefers-reduced-motion: reduce){ .scroll-end{animation:none;} }
+  @keyframes scrollEndBlink{50%{opacity:.3;}}
+
+  /* STEP11: タブ */
+  .tab-bar{display:flex; gap:8px; flex-wrap:wrap;}
+  .tab-btn{
+    font-family:var(--font-body); font-weight:700; font-size:1.3rem; padding:1em 2.6em; min-width:104px; border:none;
+    background:var(--surface-2); color:var(--muted); border-radius:14px 14px 0 0; cursor:pointer;
+    transition:background .15s, color .15s, box-shadow .15s;
+  }
+  .tab-btn.active{background:var(--surface); color:var(--accent-ink); box-shadow:0 -3px 0 var(--accent) inset;}
+  .tab-btn.target{background:rgba(255,106,19,.16); color:#FF6A13; box-shadow:0 -3px 0 #FF6A13 inset; animation:guideGlowOrange 1.5s ease-in-out infinite;}
+  .tab-btn.target.active{animation:none;}
+  @keyframes guideGlowOrange{
+    0%,100%{box-shadow:0 -3px 0 #FF6A13 inset, 0 0 0 0 transparent;}
+    50%{box-shadow:0 -3px 0 #FF6A13 inset, 0 0 14px 3px rgba(255,106,19,.55);}
+  }
+  @media (prefers-reduced-motion: reduce){ .tab-btn.target{animation:none;} }
+  .tab-panel{
+    border:1px solid var(--border); border-radius:0 0 12px 12px; padding:20px 16px; background:var(--surface);
+    min-height:60px; font-size:.92rem; color:var(--ink);
+  }
+
+  /* STEP12: 名前クイズ */
+  .quiz-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:16px 0 4px;}
+  @media (max-width:520px){ .quiz-grid{grid-template-columns:repeat(2,1fr);} }
+  .quiz-item{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    border:2px solid var(--border); border-radius:12px; padding:16px 8px; text-align:center; background:var(--surface);
+    cursor:pointer; color:var(--ink); transition:border-color .15s, background .15s;
+  }
+  .quiz-item:disabled{cursor:default;}
+  .quiz-item.correct{border-color:var(--success); background:var(--success-soft); color:var(--success);}
+  .quiz-item svg{display:block; margin:0 auto;}
+  .quiz-item .guide-tag{font-size:.72rem; padding:.3em .7em .3em .55em;}
+  .quiz-item .guide-tag svg{width:16px; height:16px;}
+  .quiz-label{font-size:.78rem; font-weight:700; color:var(--muted);}
+  .quiz-item.correct .quiz-label{color:var(--success);}
+
+  @media (max-width:520px){
+    .card{padding:26px 18px;}
+    .menu-list{grid-template-columns:1fr;}
+    .seg-label{display:none;}
+    .recap-key{font-size:.7rem;}
+    .practice{padding:20px 14px 16px;}
+  }
+
+  .ctx-menu{
+    position:fixed; z-index:70; min-width:180px; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:5px; box-shadow:0 10px 30px rgba(0,0,0,.28); display:none;
+  }
+  .ctx-menu.open{display:block;}
+  .ctx-item{
+    display:block; width:100%; text-align:left; font-family:var(--font-body); font-size:.9rem; color:var(--ink);
+    background:none; border:none; border-radius:6px; padding:.5em .8em; cursor:pointer;
+  }
+  .ctx-item:hover, .ctx-item:focus-visible{background:var(--accent-soft); color:var(--accent-ink); outline:none;}
+  .ctx-sep{height:1px; background:var(--border); margin:4px 2px;}
+</style>
+
+<div class="app">
+  <div class="success-overlay" id="successOverlay" aria-hidden="true"><div class="success-badge">成功！</div></div>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-text">PC操作シミュレーター with AI <span class="ed-tag intro">導入編</span><small>TRAINING TOOL</small></span>
+    </div>
+    <div class="os-badge" id="osBadge">環境を確認中…</div>
+  </header>
+
+  <nav class="progress" id="progress" hidden aria-label="学習の進み具合">
+    <div class="seg" data-n="1"><span class="seg-dot">1</span><span class="seg-label">ポイント</span></div>
+    <div class="seg" data-n="2"><span class="seg-dot">2</span><span class="seg-label">クリック</span></div>
+    <div class="seg" data-n="3"><span class="seg-dot">3</span><span class="seg-label">ダブル</span></div>
+    <div class="seg" data-n="4"><span class="seg-dot">4</span><span class="seg-label">右クリック</span></div>
+    <div class="seg" data-n="5"><span class="seg-dot">5</span><span class="seg-label">ドラッグ</span></div>
+    <div class="seg" data-n="6"><span class="seg-dot">6</span><span class="seg-label">スクロール</span></div>
+    <div class="seg" data-n="7"><span class="seg-dot">7</span><span class="seg-label">入力欄</span></div>
+    <div class="seg" data-n="8"><span class="seg-dot">8</span><span class="seg-label">入力</span></div>
+    <div class="seg" data-n="9"><span class="seg-dot">9</span><span class="seg-label">消す</span></div>
+    <div class="seg" data-n="10"><span class="seg-dot">10</span><span class="seg-label">ウィンドウ</span></div>
+    <div class="seg" data-n="11"><span class="seg-dot">11</span><span class="seg-label">タブ</span></div>
+    <div class="seg" data-n="12"><span class="seg-dot">12</span><span class="seg-label">名前</span></div>
+  </nav>
+
+  <main class="stage">
+
+    <section class="screen active" id="screen-start">
+      <div class="card start-card">
+        <p class="eyebrow">TRAINING TOOL</p>
+        <h1>PC操作シミュレーター with AI <span class="ed-tag intro">導入編</span></h1>
+        <p class="lead">マウスとキーボードの、いちばん最初の基本を練習します。</p>
+        <p class="body-text">「基本編」「応用編」に進む前の準備編です。カーソルの動かし方、クリック、ドラッグ、文字の入力など、パソコンを触るうえで欠かせない12個の操作を、実際に手を動かしながら練習します。すでに慣れている方は、基本編から始めてもかまいません。</p>
+        <ul class="menu-list">
+          <li>① カーソルを合わせる</li><li>② クリック</li>
+          <li>③ ダブルクリック</li><li>④ 右クリック</li>
+          <li>⑤ ドラッグ＆ドロップ</li><li>⑥ スクロール</li>
+          <li>⑦ 入力欄をクリック</li><li>⑧ 入力してEnter</li>
+          <li>⑨ Backspace/Deleteで消す</li><li>⑩ ウィンドウの基本</li>
+          <li>⑪ タブの切り替え</li><li>⑫ 名前を知る</li>
+        </ul>
+        <p class="note">Windows・Macのどちらでも練習できます。</p>
+        <button class="btn btn-primary" id="startBtn">はじめる</button>
+      </div>
+    </section>
+
+    <!-- STEP 1: カーソルを動かす／合わせる（ポイント） -->
+    <section class="screen" id="screen-1">
+      <div class="card">
+        <p class="eyebrow">STEP 1 / 12</p>
+        <h2>カーソルを合わせる：ポイント</h2>
+        <p class="meaning">マウスを動かすと、画面の中の矢印（カーソル）も一緒に動きます。何かの上に「合わせる」ことを、ポイントと言います。クリックする前に、まずこれができないと始まりません。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck any"><span class="kbd-deck-label">操作</span><div class="kbd-keys"><span class="key-cap mouse">マウスを動かす</span></div></div>
+        </div>
+        <div class="practice waiting" id="practice1">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下の光っている丸に、マウスカーソルを合わせてください。クリックしなくてOKです。</p>
+          <div class="point-wrap"><span class="point-target guide-glow" id="s1Target"></span></div>
+        </div>
+        <div class="feedback" id="feedback1" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>マウス（またはトラックパッド）をゆっくり動かして、画面の中の矢印を丸に近づけてください。丸の上で少しだけ止まると成功です。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next1" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 2: クリック -->
+    <section class="screen" id="screen-2">
+      <div class="card">
+        <p class="eyebrow">STEP 2 / 12</p>
+        <h2>クリック</h2>
+        <p class="meaning">何かを選んだり、ボタンを押したりするときに使う、いちばん基本の操作です。マウスの左側のボタンを1回だけ押します。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck any"><span class="kbd-deck-label">操作</span><div class="kbd-keys"><span class="key-cap mouse" data-match="click">クリック（1回）</span></div></div>
+        </div>
+        <div class="practice waiting" id="practice2">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下のボタンを、1回クリックしてください。</p>
+          <div class="point-wrap"><button type="button" class="btn btn-primary guide-glow" id="s2Btn">このボタンを押してください</button></div>
+        </div>
+        <div class="feedback" id="feedback2" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>ボタンの上にカーソルを合わせてから、マウスの左ボタン（トラックパッドは軽く1回押す）を押します。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next2" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 3: ダブルクリック -->
+    <section class="screen" id="screen-3">
+      <div class="card">
+        <p class="eyebrow">STEP 3 / 12</p>
+        <h2>ダブルクリック</h2>
+        <p class="meaning">ファイルやフォルダを「開く」ときに使う操作です。クリックを、すばやく2回続けて押します。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck any"><span class="kbd-deck-label">操作</span><div class="kbd-keys"><span class="key-cap mouse" data-match="click">クリック</span><span class="key-plus">×2 すばやく</span></div></div>
+        </div>
+        <div class="practice waiting" id="practice3">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下の「報告書.docx」を、すばやく2回クリック（ダブルクリック）してください。</p>
+          <div class="fm">
+            <ul class="fm-list">
+              <li class="fm-row guide-glow" id="s3Row"><span class="fm-ico">doc</span><span class="fm-name">報告書.docx</span></li>
+            </ul>
+          </div>
+          <div class="win-mock" id="s3Opened" hidden>
+            <div class="win-mock-bar">報告書.docx</div>
+            <div class="win-mock-body">開きました！ダブルクリックで、中身が表示されます。</div>
+          </div>
+        </div>
+        <div class="feedback" id="feedback3" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>クリックとクリックの間を、あまり空けすぎないのがコツです。1回ずつのクリックとして扱われてしまうと開きません。もう一度、テンポよく2回押してみてください。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next3" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 4: 右クリック -->
+    <section class="screen" id="screen-4">
+      <div class="card">
+        <p class="eyebrow">STEP 4 / 12</p>
+        <h2>右クリック</h2>
+        <p class="meaning">「別の操作メニュー」を呼び出す方法です。ここでは軽く体験するだけで大丈夫です（本格的な使い方は、応用編でくわしく練習します）。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck any"><span class="kbd-deck-label">操作</span><div class="kbd-keys"><span class="key-cap mouse" data-match="rclick">右クリック</span></div></div>
+        </div>
+        <div class="practice waiting" id="practice4">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下の「資料.pdf」の上で、右クリック（マウスの右ボタンを一回押す）してください。</p>
+          <div class="fm">
+            <ul class="fm-list">
+              <li class="fm-row guide-glow" id="s4Target"><span class="fm-ico">pdf</span><span class="fm-name">資料.pdf</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="feedback" id="feedback4" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>マウスの右側のボタンを押します。トラックパッドは、2本指でクリック（または Control を押しながらクリック）します。メニューが出たら、どれでもいいので1つ選んでください。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next4" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 5: ドラッグ＆ドロップ -->
+    <section class="screen" id="screen-5">
+      <div class="card">
+        <p class="eyebrow">STEP 5 / 12</p>
+        <h2>ドラッグ＆ドロップ</h2>
+        <p class="meaning">何かを「つかんだまま動かして、離す」操作です。ボタンを押したまま動かし、目的の場所で指を離します。箱を別の箱へ運ぶ感覚です。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck any"><span class="kbd-deck-label">操作</span><div class="kbd-keys"><span class="key-cap mouse" data-match="click">つかむ</span><span class="key-plus">→</span><span class="key-cap mouse">動かす</span><span class="key-plus">→</span><span class="key-cap mouse">離す</span></div></div>
+        </div>
+        <div class="practice waiting" id="practice5">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下の点滅している箱にカーソルをあわせて、左クリックしたまま（左ボタンを押したまま）にしてください。</p>
+          <p class="practice-instruction sub gated" data-phase="2">② 「ここへ離す」の枠のところに来たら、左クリックを解除（左のボタンを離す）してください。</p>
+          <div class="drag-stage">
+            <div class="drag-item guide-glow" id="s5Item" draggable="true">箱</div>
+            <div class="drop-zone" id="s5Zone">ここへ離す</div>
+          </div>
+        </div>
+        <div class="feedback" id="feedback5" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>箱の上でマウスのボタンを押したまま、下の枠まで動かしてから、ボタンを離してください。スマホのフリックとは違い、押している間ずっと動かし続けるのがコツです。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next5" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 6: スクロール -->
+    <section class="screen" id="screen-6">
+      <div class="card">
+        <p class="eyebrow">STEP 6 / 12</p>
+        <h2>スクロール</h2>
+        <p class="meaning">画面に入りきらない続きを見るために、上下に動かす操作です。「下にも続きがあります」に気づけるかどうかは、初心者にとって意外と重要です。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck any"><span class="kbd-deck-label">操作</span><div class="kbd-keys"><span class="key-cap mouse">ホイール／トラックパッドで上下</span></div></div>
+        </div>
+        <div class="practice waiting" id="practice6">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下の枠の中を、一番下までスクロールしてください。</p>
+          <div class="zoom-guide" id="s6Guide"></div>
+          <div class="scroll-box guide-glow" id="s6Box">
+            <p>この中には、まだまだ続きの文章があります。</p>
+            <p>マウスホイールを回すか、トラックパッドを指2本で動かしてみましょう。</p>
+            <p>右はしの<span class="hl-scroll">オレンジのスクロールバー</span>を、指やマウスでつかんで動かしてもOKです。</p>
+            <p>下にも続きがあることに、気づけましたか？</p>
+            <p>もう少しです。</p>
+            <p class="scroll-end">ここまで来たら成功です！</p>
+          </div>
+        </div>
+        <div class="feedback" id="feedback6" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>枠の中にカーソルを合わせてから、マウスホイールを下方向に回してください。トラックパッドは、指2本を下に動かします。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next6" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 7: 文字入力欄をクリック → カーソルを出す -->
+    <section class="screen" id="screen-7">
+      <div class="card">
+        <p class="eyebrow">STEP 7 / 12</p>
+        <h2>文字入力欄をクリック：カーソルを出す</h2>
+        <p class="meaning">文字を打つ前に、まず「どこに入力するか」を選ぶ操作です。入力できる場所をクリックすると、点滅するたて線（カーソル）が出てきます。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck any"><span class="kbd-deck-label">操作</span><div class="kbd-keys"><span class="key-cap mouse" data-match="click">クリック</span></div></div>
+        </div>
+        <div class="practice waiting" id="practice7">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下の入力欄をクリックして、点滅するカーソルを出してください。</p>
+          <input class="practice-input" id="s7Input" type="text" placeholder="ここをクリック">
+        </div>
+        <div class="feedback" id="feedback7" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>四角い枠の中をクリックします。枠の中で「｜」が点滅し始めたら成功です。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next7" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 8: 文字を入力する → Enter -->
+    <section class="screen" id="screen-8">
+      <div class="card">
+        <p class="eyebrow">STEP 8 / 12</p>
+        <h2>文字を入力する：Enter</h2>
+        <p class="meaning">キーボードで文字を打って、Enterキーで「確定・次へ」を伝える操作です。日本語入力では、変換を確定するEnterと、入力そのものを確定するEnterの、2回分になることもあります。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck any"><span class="kbd-deck-label">キーボード</span><div class="kbd-keys"><span class="key-cap" data-match="enter">Enter</span></div></div>
+        </div>
+        <div class="practice waiting" id="practice8">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下の入力欄に、何か好きな文字を入力してください（日本語でもローマ字でもOK）。</p>
+          <p class="practice-instruction sub gated" data-phase="2">② 入力できたら、Enterキーを押してください。</p>
+          <input class="practice-input" id="s8Input" type="text" placeholder="ここに入力">
+        </div>
+        <div class="feedback" id="feedback8" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>日本語入力のときは、変換候補が出ている状態でEnterを押すと「変換の確定」になります。もう一度Enterを押すと、入力そのものが確定されます。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next8" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 9: Backspace/Deleteで消す -->
+    <section class="screen" id="screen-9">
+      <div class="card">
+        <p class="eyebrow">STEP 9 / 12</p>
+        <h2>Backspace／Deleteで消す</h2>
+        <p class="meaning">入力を間違えたときに、文字を消せる操作です。これができると分かっていれば、失敗をおそれず練習できます。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck any"><span class="kbd-deck-label">キーボード</span><div class="kbd-keys"><span class="key-cap" data-match="backspace">Backspace</span><span class="key-or">または</span><span class="key-cap" data-match="delete">Delete</span></div></div>
+        </div>
+        <div class="practice waiting" id="practice9">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下の文字を、Backspace（Macは delete と書かれています）キーで全部消してください。</p>
+          <input class="practice-input" id="s9Input" type="text" value="けしてみてください">
+        </div>
+        <div class="feedback" id="feedback9" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>入力欄をクリックしてカーソルを文字の右はしに置き、Backspaceキーを何度か押します。全部選んでから1回で消すこともできます（基本編の「全選択」で練習します）。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next9" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 10: ウィンドウの基本 -->
+    <section class="screen" id="screen-10">
+      <div class="card">
+        <p class="eyebrow">STEP 10 / 12</p>
+        <h2>ウィンドウの基本</h2>
+        <p class="meaning">アプリを開くと表示される、四角い画面のことを「ウィンドウ」と言います。閉じる・小さくしまう（最小化）・大きく広げる（最大化）の3つを覚えましょう。</p>
+        <div class="practice waiting" id="practice10">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 下の3つのボタンを、順番はどれからでもいいので、全部押してください。</p>
+          <div class="win-mock" id="s10Win">
+            <div class="win-mock-bar">れんしゅう用ウィンドウ</div>
+            <div class="win-mock-body">これが「ウィンドウ」です。</div>
+          </div>
+          <div class="win-actions">
+            <button type="button" class="btn btn-primary guide-glow" id="s10Min">－ 最小化</button>
+            <button type="button" class="btn btn-primary guide-glow" id="s10Max">▢ 最大化</button>
+            <button type="button" class="btn btn-primary guide-glow" id="s10Close">✕ 閉じる</button>
+          </div>
+        </div>
+        <div class="feedback" id="feedback10" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>実際のアプリでは、ウィンドウの右上（Windows）または左上（Mac）にある小さなボタンで、閉じる・最小化・最大化ができます。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next10" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 11: タブ -->
+    <section class="screen" id="screen-11">
+      <div class="card">
+        <p class="eyebrow">STEP 11 / 12</p>
+        <h2>タブとは何か：タブを切り替える</h2>
+        <p class="meaning">1つのウィンドウの中で、複数の画面を切り替えて使うための仕組みです。ブラウザでよく使います。「画面が消えた！」と思ったら、実は別のタブにいるだけ、ということがよくあります。</p>
+        <div class="keyboard-display">
+          <div class="kbd-deck any"><span class="kbd-deck-label">操作</span><div class="kbd-keys"><span class="key-cap mouse" data-match="click">クリック</span></div></div>
+        </div>
+        <div class="practice waiting" id="practice11">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 「B」のタブをクリックして、切り替えてください。</p>
+          <div class="tab-bar">
+            <button type="button" class="tab-btn active" id="s11TabA" data-tab="a">A</button>
+            <button type="button" class="tab-btn target" id="s11TabB" data-tab="b">B</button>
+            <button type="button" class="tab-btn" id="s11TabC" data-tab="c">C</button>
+          </div>
+          <div class="tab-panel" id="s11Panel">これはAの画面です。</div>
+        </div>
+        <div class="feedback" id="feedback11" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>上に並んだ「A」「B」「C」のうち、「B」と書かれた部分をクリックしてください。今どのタブを見ているかは、少し浮き上がって見えるタブで分かります。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next11" hidden>次へ進む</button>
+      </div>
+    </section>
+
+    <!-- STEP 12: 名前を知る -->
+    <section class="screen" id="screen-12">
+      <div class="card">
+        <p class="eyebrow">STEP 12 / 12</p>
+        <h2>名前を知る：ファイル・フォルダ・ブラウザ・入力欄</h2>
+        <p class="meaning">画面の中の部品には、それぞれ名前があります。1枚の書類のような形が「ファイル」、書類をまとめる入れ物が「フォルダ」、上に横線が入った四角い窓が「ブラウザ」、文字を打てる細長い四角が「入力欄」です。名前が分かれば、「この部分をクリックしてください」と言われたときに迷いません。</p>
+        <div class="practice waiting" id="practice12">
+          <span class="practice-tag">練習エリア</span>
+          <p class="practice-instruction" data-phase="1">① 光っているアイコンを、順番にクリックしてください。クリックすると、名前が表示されます。</p>
+          <div class="quiz-grid" id="s12Grid">
+            <button type="button" class="quiz-item" data-name="file" aria-label="ファイルのアイコン">
+              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+              <span class="quiz-label" hidden>ファイル</span>
+            </button>
+            <button type="button" class="quiz-item" data-name="folder" aria-label="フォルダのアイコン">
+              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              <span class="quiz-label" hidden>フォルダ</span>
+            </button>
+            <button type="button" class="quiz-item" data-name="browser" aria-label="ブラウザのアイコン">
+              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/><circle cx="5.5" cy="6.5" r=".7" fill="currentColor" stroke="none"/><circle cx="8" cy="6.5" r=".7" fill="currentColor" stroke="none"/></svg>
+              <span class="quiz-label" hidden>ブラウザ</span>
+            </button>
+            <button type="button" class="quiz-item" data-name="input" aria-label="入力欄のアイコン">
+              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="2"/><line x1="7" y1="9.5" x2="7" y2="14.5"/></svg>
+              <span class="quiz-label" hidden>入力欄</span>
+            </button>
+          </div>
+        </div>
+        <div class="feedback" id="feedback12" role="status"></div>
+        <details class="hint"><summary>うまくいかないとき</summary>
+          <p>光っているアイコンだけが反応します。まずは光っている1つ目をクリックしてください。名前が表示されたら、光る場所が次のアイコンに移ります。</p>
+        </details>
+        <button class="btn btn-primary next-btn" id="next12" hidden>学習を終える</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-end">
+      <div class="card end-card">
+        <p class="eyebrow">CLEAR</p>
+        <h1>お疲れさまでした</h1>
+        <p class="lead">マウスとキーボードの、いちばん基本の12個を練習しました。</p>
+        <ul class="recap-list">
+          <li><span class="recap-n">1</span><span class="recap-name">ポイント</span><span class="recap-key">カーソルを合わせる</span></li>
+          <li><span class="recap-n">2</span><span class="recap-name">クリック</span><span class="recap-key">1回押す</span></li>
+          <li><span class="recap-n">3</span><span class="recap-name">ダブルクリック</span><span class="recap-key">すばやく2回</span></li>
+          <li><span class="recap-n">4</span><span class="recap-name">右クリック</span><span class="recap-key">メニューを出す</span></li>
+          <li><span class="recap-n">5</span><span class="recap-name">ドラッグ＆ドロップ</span><span class="recap-key">つかんで動かす</span></li>
+          <li><span class="recap-n">6</span><span class="recap-name">スクロール</span><span class="recap-key">上下に動かす</span></li>
+          <li><span class="recap-n">7</span><span class="recap-name">入力欄をクリック</span><span class="recap-key">カーソルを出す</span></li>
+          <li><span class="recap-n">8</span><span class="recap-name">入力してEnter</span><span class="recap-key">確定・次へ</span></li>
+          <li><span class="recap-n">9</span><span class="recap-name">Backspace／Delete</span><span class="recap-key">消す</span></li>
+          <li><span class="recap-n">10</span><span class="recap-name">ウィンドウの基本</span><span class="recap-key">閉じる/最小化/最大化</span></li>
+          <li><span class="recap-n">11</span><span class="recap-name">タブの切り替え</span><span class="recap-key">画面を行き来</span></li>
+          <li><span class="recap-n">12</span><span class="recap-name">名前を知る</span><span class="recap-key">ファイル/フォルダ/ブラウザ/入力欄</span></li>
+        </ul>
+        <p class="body-text">ここまでできれば準備は万全です。続けて「基本編」で、全選択・コピー・貼り付けなど、AIを使ううえで欠かせない操作に進みましょう。</p>
+        <button class="btn btn-primary" id="restartBtn">もう一度練習する</button>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="ctx-menu" id="ctxMenu" role="menu">
+    <button type="button" class="ctx-item" role="menuitem" data-act="open">開く</button>
+    <button type="button" class="ctx-item" role="menuitem" data-act="copy">コピー</button>
+    <button type="button" class="ctx-item" role="menuitem" data-act="rename">名前の変更</button>
+    <div class="ctx-sep"></div>
+    <button type="button" class="ctx-item" role="menuitem" data-act="delete">削除</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+  document.body.classList.add(isMac ? 'os-mac' : 'os-win');
+  $('osBadge').textContent = 'あなたの環境: ' + (isMac ? 'Mac' : 'Windows') + '（自動判定）';
+
+  var TOTAL = 12;
+  var current = 'start';
+  var enterHooks = {};
+
+  function show(id){
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+    $('screen-' + id).classList.add('active');
+    current = id;
+    $('progress').hidden = (id === 'start' || id === 'end');
+    document.querySelectorAll('.seg').forEach(function(seg){
+      var n = Number(seg.dataset.n);
+      seg.classList.toggle('current', id === n);
+      seg.classList.toggle('done', (typeof id === 'number' && n < id) || id === 'end');
+    });
+    closeMenu();
+    if (enterHooks[id]) enterHooks[id]();
+    window.scrollTo(0, 0);
+  }
+
+  function showBigSuccess(){
+    var overlay = $('successOverlay');
+    overlay.classList.remove('show');
+    void overlay.offsetWidth;
+    overlay.classList.add('show');
+    clearTimeout(showBigSuccess._t);
+    showBigSuccess._t = setTimeout(function(){ overlay.classList.remove('show'); }, 1100);
+  }
+
+  function markSuccess(practiceEl, feedbackEl, nextBtn, message){
+    practiceEl.classList.remove('waiting');
+    practiceEl.classList.add('completed');
+    feedbackEl.textContent = message;
+    feedbackEl.classList.remove('warn', 'progress');
+    feedbackEl.classList.add('success');
+    nextBtn.hidden = false;
+    showBigSuccess();
+  }
+  function win(n, msg){ markSuccess($('practice' + n), $('feedback' + n), $('next' + n), msg); }
+  function say(n, msg, cls){
+    var f = $('feedback' + n);
+    f.textContent = msg;
+    f.classList.remove('warn', 'progress');
+    if (cls) f.classList.add(cls);
+  }
+  function activate(n, phase){
+    var el = document.querySelector('#practice' + n + ' [data-phase="' + phase + '"]');
+    if (el) el.classList.add('active');
+  }
+  function composing(e){ return e.isComposing || e.keyCode === 229; }
+  var ARROWS = {
+    left: '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H5M11 5l-7 7 7 7"/></svg>',
+    down: '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15M5 13l7 7 7-7"/></svg>',
+    up: '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V5M5 11l7-7 7 7"/></svg>'
+  };
+  function guideTag(text, dir){
+    var s = document.createElement('span');
+    s.className = 'guide-tag' + (ARROWS[dir] ? ' ' + dir : '');
+    s.insertAdjacentHTML('afterbegin', ARROWS[dir] || '');
+    var label = document.createElement('span');
+    label.textContent = text;
+    s.appendChild(label);
+    return s;
+  }
+
+  var menu = $('ctxMenu');
+  function closeMenu(){ menu.classList.remove('open'); }
+  function openMenu(x, y){
+    menu.classList.add('open');
+    var r = menu.getBoundingClientRect();
+    menu.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
+    menu.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + 'px';
+  }
+
+  $('startBtn').addEventListener('click', function(){ show(1); });
+  $('restartBtn').addEventListener('click', function(){ location.reload(); });
+  for (var i = 1; i <= TOTAL; i++){
+    (function(n){
+      $('next' + n).addEventListener('click', function(){ show(n === TOTAL ? 'end' : n + 1); });
+    })(i);
+  }
+
+  // ===== 実物のキーボードを模したキーUIの発光 =====
+  function keyMatch(e){
+    var c = e.code || '', m;
+    if ((m = /^Key([A-Za-z])$/.exec(c))) return m[1].toLowerCase();
+    if ((m = /^Digit([0-9])$/.exec(c))) return m[1];
+    if (c.indexOf('Control') === 0) return 'ctrl';
+    if (c.indexOf('Shift') === 0) return 'shift';
+    if (c.indexOf('Meta') === 0) return 'meta';
+    if (c.indexOf('Alt') === 0) return 'alt';
+    if (c === 'Enter' || c === 'NumpadEnter') return 'enter';
+    if (c === 'Backspace') return 'backspace';
+    if (c === 'Delete') return 'delete';
+    return null;
+  }
+  function litKeys(match, on){
+    var s = document.querySelector('.screen.active');
+    if (!s) return;
+    s.querySelectorAll('.kbd-deck.any, .kbd-deck.' + (isMac ? 'mac' : 'win')).forEach(function(deck){
+      deck.querySelectorAll('.key-cap[data-match="' + match + '"]').forEach(function(cap){
+        cap.classList.toggle('lit', on);
+      });
+    });
+  }
+  var litByCode = {};
+  function clearAllLit(){
+    litByCode = {};
+    document.querySelectorAll('.key-cap.lit').forEach(function(c){ c.classList.remove('lit'); });
+  }
+  window.addEventListener('keydown', function(e){
+    var m = keyMatch(e);
+    if (!m) return;
+    litByCode[e.code] = m;
+    litKeys(m, true);
+  });
+  window.addEventListener('keyup', function(e){
+    if ((e.code || '').indexOf('Meta') === 0){
+      Object.keys(litByCode).forEach(function(code){ litKeys(litByCode[code], false); });
+      litByCode = {};
+      litKeys('meta', false);
+      return;
+    }
+    var m = litByCode[e.code] || keyMatch(e);
+    if (!m) return;
+    delete litByCode[e.code];
+    litKeys(m, false);
+  });
+  window.addEventListener('blur', clearAllLit);
+  window.addEventListener('mousedown', function(e){ litKeys(e.button === 2 ? 'rclick' : 'click', true); });
+  window.addEventListener('mouseup', function(){ litKeys('click', false); litKeys('rclick', false); });
+  window.addEventListener('contextmenu', function(){
+    litKeys('rclick', true);
+    setTimeout(function(){ litKeys('rclick', false); }, 350);
+  });
+
+  // ===== STEP 1: ポイント（カーソルを合わせる） =====
+  (function(){
+    var target = $('s1Target');
+    var done = false, timer = null;
+    target.addEventListener('pointerenter', function(){
+      if (done || current !== 1) return;
+      timer = setTimeout(function(){
+        if (done || current !== 1) return;
+        done = true;
+        target.classList.remove('guide-glow');
+        target.classList.add('done');
+        win(1, 'カーソルを合わせられました。これが「ポイント」です。');
+      }, 450);
+    });
+    target.addEventListener('pointerleave', function(){ clearTimeout(timer); });
+  })();
+
+  // ===== STEP 2: クリック =====
+  (function(){
+    var btn = $('s2Btn'), done = false;
+    btn.addEventListener('click', function(){
+      if (done || current !== 2) return;
+      done = true;
+      btn.classList.remove('guide-glow');
+      btn.disabled = true;
+      win(2, 'クリックできました。いちばんよく使う操作です。');
+    });
+  })();
+
+  // ===== STEP 3: ダブルクリック =====
+  (function(){
+    var row = $('s3Row'), done = false;
+    row.addEventListener('dblclick', function(){
+      if (done || current !== 3) return;
+      done = true;
+      row.classList.remove('guide-glow');
+      $('s3Opened').hidden = false;
+      win(3, 'ダブルクリックできました。ファイルやフォルダは、これで開きます。');
+    });
+  })();
+
+  // ===== STEP 4: 右クリック =====
+  (function(){
+    var target = $('s4Target'), done = false;
+    target.addEventListener('contextmenu', function(e){
+      if (done || current !== 4) return;
+      e.preventDefault();
+      target.classList.remove('guide-glow');
+      openMenu(e.clientX, e.clientY);
+      done = true;
+      win(4, '右クリックできました。メニューが出てきましたね。これで、いろいろな操作を呼び出せます。');
+    });
+    menu.addEventListener('click', function(e){
+      if (current !== 4) return;
+      var btn = e.target.closest('.ctx-item');
+      if (!btn) return;
+      closeMenu();
+    });
+  })();
+
+  // ===== STEP 5: ドラッグ＆ドロップ =====
+  (function(){
+    var item = $('s5Item'), zone = $('s5Zone'), done = false, dragging = false;
+    item.addEventListener('dragstart', function(e){
+      if (e.dataTransfer){ e.dataTransfer.setData('text/plain', 'box'); e.dataTransfer.effectAllowed = 'move'; }
+      if (!done && current === 5 && !dragging){
+        dragging = true;
+        activate(5, 2);
+        say(5, '押さえたまま、下の「ここへ離す」の枠まで動かしましょう。', 'progress');
+      }
+    });
+    zone.addEventListener('dragenter', function(e){ if (!done && current === 5){ e.preventDefault(); zone.classList.add('drop-over'); } });
+    zone.addEventListener('dragover', function(e){
+      if (done || current !== 5) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      zone.classList.add('drop-over');
+    });
+    zone.addEventListener('dragleave', function(){ zone.classList.remove('drop-over'); });
+    zone.addEventListener('drop', function(e){
+      e.preventDefault();
+      zone.classList.remove('drop-over');
+      if (done || current !== 5) return;
+      done = true;
+      item.hidden = true;
+      item.classList.remove('guide-glow');
+      zone.classList.add('filled');
+      zone.textContent = '入りました！';
+      win(5, 'ドラッグ＆ドロップができました。ファイルの移動などによく使います。');
+    });
+  })();
+
+  // ===== STEP 6: スクロール =====
+  (function(){
+    var box = $('s6Box'), guide = $('s6Guide'), done = false;
+    enterHooks[6] = function(){
+      guide.innerHTML = '';
+      guide.appendChild(guideTag('下へスクロール', 'down'));
+    };
+    box.addEventListener('scroll', function(){
+      if (done || current !== 6) return;
+      if (box.scrollTop + box.clientHeight >= box.scrollHeight - 6){
+        done = true;
+        box.classList.remove('guide-glow');
+        guide.innerHTML = '';
+        win(6, '一番下までスクロールできました。長い画面でも、下に続きがあることを忘れないでください。');
+      }
+    });
+  })();
+
+  // ===== STEP 7: 文字入力欄をクリック =====
+  (function(){
+    var input = $('s7Input'), done = false;
+    function onFocusLike(){
+      if (done || current !== 7) return;
+      done = true;
+      win(7, 'クリックできました。点滅するカーソルが、入力できる場所の合図です。');
+    }
+    // focusイベントに加えてclickでも判定する（フォーカスは正しく移っていても、
+    // ウィンドウ自体がOSからフォーカスされていない環境ではfocusイベントが
+    // 発火しないことがあるため、より確実なclickも併用する）
+    input.addEventListener('focus', onFocusLike);
+    input.addEventListener('click', onFocusLike);
+  })();
+
+  // ===== STEP 8: 入力してEnter =====
+  (function(){
+    var input = $('s8Input'), practice = $('practice8'), done = false, typed = false;
+    input.addEventListener('input', function(){
+      if (done || current !== 8) return;
+      if (!typed && input.value.length > 0){
+        typed = true;
+        activate(8, 2);
+        say(8, '入力できました。次はEnterを押しましょう。', 'progress');
+      }
+    });
+    input.addEventListener('keydown', function(e){
+      if (done || current !== 8 || composing(e)) return;
+      if (e.key !== 'Enter' || !typed) return;
+      done = true;
+      win(8, 'Enterで確定できました。これで「次へ進む」の合図になります。');
+    });
+  })();
+
+  // ===== STEP 9: Backspace/Deleteで消す =====
+  (function(){
+    var input = $('s9Input'), done = false;
+    input.addEventListener('input', function(){
+      if (done || current !== 9) return;
+      if (input.value.length === 0){
+        done = true;
+        win(9, '消せました。間違えても、いつでもやり直せます。');
+      }
+    });
+  })();
+
+  // ===== STEP 10: ウィンドウの基本 =====
+  (function(){
+    var winEl = $('s10Win'), doneSet = {}, total = 3;
+    function bind(btn, key, cls){
+      btn.addEventListener('click', function(){
+        if (current !== 10 || doneSet[key]) return;
+        doneSet[key] = true;
+        btn.classList.remove('guide-glow');
+        btn.disabled = true;
+        winEl.classList.remove('anim-close', 'anim-min', 'anim-max');
+        void winEl.offsetWidth;
+        winEl.classList.add(cls);
+        if (Object.keys(doneSet).length === total){
+          win(10, '閉じる・最小化・最大化、3つとも試せました。');
+        } else {
+          say(10, 'あと ' + (total - Object.keys(doneSet).length) + ' つです。', 'progress');
+        }
+      });
+    }
+    bind($('s10Min'), 'min', 'anim-min');
+    bind($('s10Max'), 'max', 'anim-max');
+    bind($('s10Close'), 'close', 'anim-close');
+  })();
+
+  // ===== STEP 11: タブ =====
+  (function(){
+    var tabs = [$('s11TabA'), $('s11TabB'), $('s11TabC')];
+    var panel = $('s11Panel'), done = false;
+    var texts = { a: 'これはAの画面です。', b: '切り替えられました。これがBの画面です。', c: 'これはCの画面です。' };
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if (current !== 11) return;
+        tabs.forEach(function(b){ b.classList.toggle('active', b === btn); });
+        $('s11TabB').classList.remove('target');
+        panel.textContent = texts[btn.dataset.tab];
+        if (!done && btn.dataset.tab === 'b'){
+          done = true;
+          win(11, 'タブを切り替えられました。1つの画面の中で、いくつもの画面を行き来できます。');
+        }
+      });
+    });
+  })();
+
+  // ===== STEP 12: 名前を知る（光っているアイコンを順番にクリックすると名前が分かる） =====
+  (function(){
+    var order = ['file', 'folder', 'browser', 'input'];
+    var names = { file: 'ファイル', folder: 'フォルダ', browser: 'ブラウザ', input: '入力欄' };
+    var idx = 0, done = false;
+    var items = {};
+    order.forEach(function(name){ items[name] = document.querySelector('#s12Grid [data-name="' + name + '"]'); });
+
+    function focusCurrent(){
+      order.forEach(function(name, i){
+        var el = items[name];
+        var tag = el.querySelector('.guide-tag');
+        if (tag) tag.remove();
+        el.classList.remove('guide-glow');
+        if (i === idx && !done){
+          el.classList.add('guide-glow');
+          el.insertBefore(guideTag('クリック', 'down'), el.firstChild);
+        }
+      });
+    }
+    enterHooks[12] = function(){ idx = 0; done = false; focusCurrent(); };
+
+    order.forEach(function(name){
+      items[name].addEventListener('click', function(){
+        if (done || current !== 12) return;
+        if (name !== order[idx]){
+          say(12, 'そのアイコンは、まだです。光っているアイコンをクリックしてください。', 'warn');
+          return;
+        }
+        var el = items[name];
+        el.classList.add('correct');
+        el.disabled = true;
+        el.querySelector('.quiz-label').hidden = false;
+        idx++;
+        if (idx < order.length){
+          focusCurrent();
+          say(12, 'これは「' + names[name] + '」のアイコン（絵）です。次のアイコンも見てみましょう。', 'progress');
+        } else {
+          done = true;
+          focusCurrent();
+          win(12, 'これは「' + names[name] + '」のアイコン（絵）です。4つとも確認できましたね。');
+        }
+      });
+    });
+  })();
+})();
+</script>

@@ -7,12 +7,12 @@
 <style>
   :root{
     --bg:#F7F3EA; --surface:#FFFFFF; --ink:#241F18; --muted:#7A705F; --border:#E1D8C3;
-    --accent:#28527A; --accent-ink:#0F2C46; --tag-basic:#1B7F6B; --tag-adv:#8A3FB0;
+    --accent:#28527A; --accent-ink:#0F2C46; --tag-basic:#1B7F6B; --tag-adv:#8A3FB0; --tag-intro:#96780A;
   }
   @media (prefers-color-scheme: dark){
     :root{
       --bg:#16140F; --surface:#211E17; --ink:#F2EEE2; --muted:#B3A991; --border:#3A3527;
-      --accent:#7FB0DE; --accent-ink:#DCEBF7; --tag-basic:#5FD0B9; --tag-adv:#C9A0EA;
+      --accent:#7FB0DE; --accent-ink:#DCEBF7; --tag-basic:#5FD0B9; --tag-adv:#C9A0EA; --tag-intro:#E6C464;
     }
   }
   *{box-sizing:border-box;}
@@ -36,6 +36,7 @@
   }
   .tag.basic{background:var(--tag-basic);}
   .tag.adv{background:var(--tag-adv);}
+  .tag.intro{background:var(--tag-intro);}
   .card h2{margin:0 0 6px; font-size:1.2rem;}
   .card p{margin:0; color:var(--muted); font-size:.92rem;}
 </style>
@@ -44,6 +45,12 @@
   <div class="wrap">
     <h1>PC操作シミュレーター with AI</h1>
     <p class="lead">説明を読むだけでなく、実際に手を動かしながらパソコンの基本操作を練習するインタラクティブ教材です。</p>
+
+    <a class="card" href="./intro/">
+      <span class="tag intro">導入編</span>
+      <h2>マウスの動かし方・クリック・ドラッグ・文字入力など、いちばん基本の12操作</h2>
+      <p>「基本編」の前に、パソコン操作そのものに慣れるための準備編です。</p>
+    </a>
 
     <a class="card" href="./basic/">
       <span class="tag basic">基本編</span>

@@ -6,6 +6,7 @@
 ## 公開ページ
 
 - トップページ: https://TOSHI-0205.github.io/pc-simulator-with-ai/
+- 導入編: https://TOSHI-0205.github.io/pc-simulator-with-ai/intro/
 - 基本編: https://TOSHI-0205.github.io/pc-simulator-with-ai/basic/
 - 応用編: https://TOSHI-0205.github.io/pc-simulator-with-ai/advanced/
 
@@ -13,6 +14,7 @@
 
 | フォルダ | 内容 |
 |---|---|
+| `intro/` | 導入編：カーソル操作・クリック・ダブルクリック・右クリック・ドラッグ＆ドロップ・スクロール・文字入力・Backspace/Delete・ウィンドウの基本・タブの切り替え・名前を知る（12操作） |
 | `basic/` | 基本編：全選択・コピー・貼り付け・スクリーンショット・Undo・Redo（6操作） |
 | `advanced/` | 応用編：拡大縮小・フォルダ作成・保存・名前変更・複数選択・右クリック・全画面スクショ（7操作） |
 
